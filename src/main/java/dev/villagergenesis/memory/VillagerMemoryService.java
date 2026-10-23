@@ -30,7 +30,10 @@ public final class VillagerMemoryService {
 
         VillagerMemory memory = VillagerMemory.forVillager(villager);
         memory.observe(villager);
-        GoalPlanner.chooseGoal(memory.snapshot()).ifPresent(memory::setCurrentGoal);
+        String activeGoal = villager.getPersistentData().getString("villager_genesis_current_goal");
+        if (!"expand_storage".equals(activeGoal) && !"explore".equals(activeGoal)) {
+            GoalPlanner.chooseGoal(memory.snapshot()).ifPresent(memory::setCurrentGoal);
+        }
         VillageKnowledgeSharingService.tryTeachOne(villager);
     }
 }
