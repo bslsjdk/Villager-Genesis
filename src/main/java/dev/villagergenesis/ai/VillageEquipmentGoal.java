@@ -11,10 +11,10 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.AxeItem;
+import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SwordItem;
-import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.util.EnumSet;
 
@@ -48,7 +48,6 @@ public final class VillageEquipmentGoal extends Goal {
 
         VillageRoleService.Role role = VillageRoleService.ensureRole(villager);
         boolean guard = role == VillageRoleService.Role.GUARD;
-        // Self-defence is optional for ordinary residents. The choice is stable across reloads.
         boolean willingResident = Math.floorMod(villager.getUUID().hashCode(), 3) == 0;
         if (!guard && !willingResident
                 && !VillagerMemory.forVillager(villager).knownKnowledge().contains("basic_defense")) {
@@ -62,7 +61,6 @@ public final class VillageEquipmentGoal extends Goal {
             return false;
         }
 
-        // Equip in priority order: weapon, shield, then missing armor pieces.
         EquipmentSlot[] order = {EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND,
                 EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
         for (EquipmentSlot slot : order) {
@@ -162,7 +160,9 @@ public final class VillageEquipmentGoal extends Goal {
     private boolean matchesSlot(ItemStack stack, EquipmentSlot slot) {
         if (stack.isEmpty()) return false;
         if (slot == EquipmentSlot.MAINHAND) {
-            return stack.getItem() instanceof SwordItem || stack.getItem() instanceof AxeItem;
+            return stack.getItem() instanceof SwordItem || stack.getItem() instanceof AxeItem
+                    || (VillageRoleService.ensureRole(villager) == VillageRoleService.Role.GUARD
+                    && stack.getItem() instanceof BowItem);
         }
         if (slot == EquipmentSlot.OFFHAND) return stack.is(Items.SHIELD);
         return stack.getItem() instanceof ArmorItem armor && armor.getEquipmentSlot() == slot;
