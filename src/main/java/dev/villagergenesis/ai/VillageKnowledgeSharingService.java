@@ -27,6 +27,8 @@ public final class VillageKnowledgeSharingService {
                 .sorted()
                 .findFirst().orElse(null);
         if (teachable == null) return;
+        teacher.getPersistentData().putLong(NEXT_TEACHING,
+                level.getGameTime() + TEACHING_COOLDOWN);
 
         var nearby = level.getEntitiesOfClass(Villager.class,
                 teacher.getBoundingBox().inflate(4.0D),
@@ -39,8 +41,6 @@ public final class VillageKnowledgeSharingService {
         if (student == null) return;
 
         VillagerMemory.forVillager(student).learnKnowledge(teachable);
-        teacher.getPersistentData().putLong(NEXT_TEACHING,
-                level.getGameTime() + TEACHING_COOLDOWN);
         student.getPersistentData().putLong(NEXT_TEACHING,
                 level.getGameTime() + TEACHING_COOLDOWN);
     }
