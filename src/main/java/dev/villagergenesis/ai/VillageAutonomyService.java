@@ -31,6 +31,8 @@ public final class VillageAutonomyService {
             villager.goalSelector.addGoal(6, new VillageEquipmentGoal(villager));
             // Founding residents turn real carried logs into planks and then a crafting table.
             villager.goalSelector.addGoal(7, new VillageBootstrapCraftingGoal(villager));
+            // Basic tools require real planks/sticks and an actually placed crafting table.
+            villager.goalSelector.addGoal(7, new VillageToolCraftingGoal(villager));
             villager.goalSelector.addGoal(7, new VillageWorkbenchPlacementGoal(villager));
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
             // Lumberjacks turn naturally grown trees into real stored building material.
