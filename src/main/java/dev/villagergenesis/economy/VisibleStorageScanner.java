@@ -67,6 +67,40 @@ public final class VisibleStorageScanner {
 
     private VisibleStorageScanner() {}
 
+    /**
+     * Expands the survey radius when storage is crowded or containers are found near the edge.
+     * Every pass replaces the prior snapshot, so item counts are never added twice. Unloaded
+     * chunks remain untouched. The caller should cache the result and schedule this infrequently.
+     */
+    public static Snapshot scanAdaptive(Level level, BlockPos center, int initialRadius,
+                                         int maximumRadius, int minimumFreeSlots) {
+        if (initialRadius < 0 || maximumRadius < initialRadius || maximumRadius > 24
+                || minimumFreeSlots < 0) {
+            throw new IllegalArgumentException("Invalid adaptive storage scan bounds.");
+        }
+        int radius = initialRadius;
+        Snapshot snapshot = scan(level, center, radius);
+        while (radius < maximumRadius) {
+            int occupiedSlots = 0;
+            int totalSlots = 0;
+            boolean nearEdge = false;
+            for (StorageContainer container : snapshot.containers()) {
+                occupiedSlots += Math.min(container.occupiedSlots(), container.slots());
+                totalSlots += container.slots();
+                int dx = Math.abs(container.x() - center.getX());
+                int dz = Math.abs(container.z() - center.getZ());
+                if (dx >= radius - 1 || dz >= radius - 1) nearEdge = true;
+            }
+            int freeSlots = Math.max(0, totalSlots - occupiedSlots);
+            boolean crowded = freeSlots < minimumFreeSlots
+                    || (totalSlots > 0 && (double) occupiedSlots / totalSlots >= 0.80);
+            if (!nearEdge && !crowded) break;
+            radius = Math.min(maximumRadius, radius + 6);
+            snapshot = scan(level, center, radius);
+        }
+        return snapshot;
+    }
+
     public static Snapshot scan(Level level, BlockPos center, int radius) {
         if (level == null || center == null) throw new IllegalArgumentException("Level and center are required.");
         if (level.isClientSide) throw new IllegalArgumentException("Public storage must be scanned on the logical server.");
