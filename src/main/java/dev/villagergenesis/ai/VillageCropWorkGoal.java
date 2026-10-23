@@ -136,7 +136,7 @@ public final class VillageCropWorkGoal extends Goal {
         BlockPos ripe = null;
         double ripeDistance = Double.MAX_VALUE;
         Container inventory = villager.getInventory();
-        boolean hasSeed = seedFor(inventory) != null;
+        boolean hasSeed = seedFor(inventory) != null && managedCropCount() < 24;
 
         for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
             for (int dy = -2; dy <= 2; dy++) {
@@ -192,6 +192,10 @@ public final class VillageCropWorkGoal extends Goal {
         if (seed == Items.POTATO) return Blocks.POTATOES;
         if (seed == Items.BEETROOT_SEEDS) return Blocks.BEETROOTS;
         return null;
+    }
+
+    private int managedCropCount() {
+        return villager.getPersistentData().getList(MANAGED_CROPS, Tag.TAG_COMPOUND).size();
     }
 
     private boolean isManagedCrop(BlockPos pos) {
