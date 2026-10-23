@@ -23,6 +23,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.WeakHashMap;
+import java.util.UUID;
 
 /**
  * Physical storage expansion behavior. A villager walks to a safe site, then consumes one real
@@ -33,6 +34,10 @@ import java.util.WeakHashMap;
  */
 public final class VillageStorageConstructionGoal extends Goal {
     private static final Map<ServerLevel, Map<Long, Long>> NEXT_SETTLEMENT_SCAN =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    // WorldBox-inspired single active construction order per local settlement region.
+    // This is a reservation only; the actual block and materials still require verification.
+    private static final Map<ServerLevel, Map<Long, UUID>> ACTIVE_BUILDERS =
             Collections.synchronizedMap(new WeakHashMap<>());
     private static final int SCAN_INTERVAL = 40;
     private static final int RETRY_AFTER_BUILD = 1_200;
@@ -63,6 +68,12 @@ public final class VillageStorageConstructionGoal extends Goal {
         long now = level.getGameTime();
         scanRegionKey = (((long) (villager.blockPosition().getX() >> 5)) << 32)
                 ^ ((villager.blockPosition().getZ() >> 5) & 0xffffffffL);
+        synchronized (ACTIVE_BUILDERS) {
+            Map<Long, UUID> active = ACTIVE_BUILDERS.computeIfAbsent(level,
+                    ignored -> new java.util.HashMap<>());
+            UUID owner = active.get(scanRegionKey);
+            if (owner != null && !owner.equals(villager.getUUID())) return false;
+        }
         synchronized (NEXT_SETTLEMENT_SCAN) {
             Map<Long, Long> regions = NEXT_SETTLEMENT_SCAN.computeIfAbsent(level,
                     ignored -> new java.util.HashMap<>());
@@ -110,6 +121,10 @@ public final class VillageStorageConstructionGoal extends Goal {
         travelTicks = 0;
         retryTicks = 0;
         finished = false;
+        synchronized (ACTIVE_BUILDERS) {
+            ACTIVE_BUILDERS.computeIfAbsent((ServerLevel) villager.level(),
+                    ignored -> new java.util.HashMap<>()).put(scanRegionKey, villager.getUUID());
+        }
         villager.getPersistentData().putString("villager_genesis_current_goal", "expand_storage");
         // Visible intent marker: players can tell the autonomy goal actually started,
         // instead of having to infer behavior from hidden planner state.
@@ -140,6 +155,15 @@ public final class VillageStorageConstructionGoal extends Goal {
     @Override
     public void stop() {
         villager.getNavigation().stop();
+        if (villager.level() instanceof ServerLevel level) {
+            synchronized (ACTIVE_BUILDERS) {
+                Map<Long, UUID> active = ACTIVE_BUILDERS.get(level);
+                if (active != null && villager.getUUID().equals(active.get(scanRegionKey))) {
+                    active.remove(scanRegionKey);
+                    if (active.isEmpty()) ACTIVE_BUILDERS.remove(level);
+                }
+            }
+        }
         villager.getPersistentData().putString("villager_genesis_current_goal", "observe");
         source = null;
         destination = null;
