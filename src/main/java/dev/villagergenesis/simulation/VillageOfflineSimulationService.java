@@ -3,6 +3,7 @@ package dev.villagergenesis.simulation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -89,16 +90,22 @@ public final class VillageOfflineSimulationService {
         if (graph.node(id) != null) return;
 
         
+        // BiomeManager sampling is data-only; never ask the chunk source to create a chunk.
         String biome = level.getBiome(samplePos).unwrapKey()
                 .map(holder -> holder.location().toString()).orElse("unknown");
+        // Heightmaps are read only when the target chunk is already loaded. For all other
+        // locations retain an explicit estimate instead of forcing terrain generation.
+        int estimatedY = level.hasChunkAt(samplePos)
+                ? level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z)
+                : level.getSeaLevel();
         int terrainScore = scoreBiome(biome);
         if (terrainScore < 20) return;
 
         int food = biome.contains("plains") || biome.contains("meadow") || biome.contains("river") ? 75 : 40;
         int timber = biome.contains("forest") || biome.contains("taiga") || biome.contains("grove") ? 80 : 35;
         int stone = biome.contains("mountain") || biome.contains("windswept") || biome.contains("stony") ? 80 : 45;
-        graph.addNode(id, x, z, level.getSeaLevel(), biome, terrainScore, now)
-                .updateTerrain(level.getSeaLevel(), biome, terrainScore, food, timber, stone);
+        graph.addNode(id, x, z, estimatedY, biome, terrainScore, now)
+                .updateTerrain(estimatedY, biome, terrainScore, food, timber, stone);
         graph.markChanged();
     }
 
