@@ -7,7 +7,10 @@ import net.minecraft.world.entity.npc.Villager;
 
 import java.util.Comparator;
 
-/** Transfers one learned, non-baseline fact during a nearby, peaceful villager interaction. */
+/**
+ * Lets villagers teach nearby residents and preserve learned knowledge in physical books.
+ * Books in public storage survive the death of their author and can teach later generations.
+ */
 public final class VillageKnowledgeSharingService {
     private static final String NEXT_TEACHING = "villager_genesis_next_teaching";
     private static final int TEACHING_COOLDOWN = 200;
@@ -22,13 +25,27 @@ public final class VillageKnowledgeSharingService {
         }
 
         var sourceMemory = VillagerMemory.forVillager(teacher);
+
+        // A physical book can outlive its author. Villagers can recover archived knowledge
+        // before teaching, so knowledge does not disappear with one particular resident.
+        String archived = VillageKnowledgeArchiveService.findUnknownKnowledge(
+                level, teacher.blockPosition(), sourceMemory.knownKnowledge());
+        if (archived != null) {
+            sourceMemory.learnKnowledge(archived);
+        }
+
         String teachable = sourceMemory.knownKnowledge().stream()
                 .filter(id -> !KnowledgeBaseline.isBaseline(id))
                 .sorted()
                 .findFirst().orElse(null);
         if (teachable == null) return;
+
         teacher.getPersistentData().putLong(NEXT_TEACHING,
                 level.getGameTime() + TEACHING_COOLDOWN);
+
+        // If a real book is available in public storage, write the knowledge into it.
+        // The archive service never conjures books or modifies virtual inventory.
+        VillageKnowledgeArchiveService.archiveOne(level, teacher.blockPosition(), teachable);
 
         var nearby = level.getEntitiesOfClass(Villager.class,
                 teacher.getBoundingBox().inflate(4.0D),
