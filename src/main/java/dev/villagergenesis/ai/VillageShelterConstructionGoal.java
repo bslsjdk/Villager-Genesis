@@ -146,6 +146,12 @@ public final class VillageShelterConstructionGoal extends Goal {
                 boolean clear = true;
                 for (int x = -1; x <= 1 && clear; x++) {
                     for (int z = -1; z <= 1 && clear; z++) {
+                        BlockPos support = center.offset(x, -1, z);
+                        if (!level.hasChunkAt(support)
+                                || !level.getBlockState(support).isFaceSturdy(level, support, Direction.UP)) {
+                            clear = false;
+                            break;
+                        }
                         for (int y = 0; y <= 3; y++) {
                             BlockPos p = center.offset(x, y, z);
                             if (!level.hasChunkAt(p) || !level.getBlockState(p).isAir()
