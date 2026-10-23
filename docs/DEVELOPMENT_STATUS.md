@@ -177,3 +177,9 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Negative candidate scans are throttled to avoid repeating bounded terrain scans every AI tick. The search is intentionally local and does not load chunks.
 - CI is the next gate. Even if compilation passes, the full founding sequence (wood -> planks -> table -> sticks/tool -> farmland -> seed/crop cycle) still requires a clean-world in-game test. Bed production/placement and animal husbandry remain incomplete.
 
+## Seed-based crop loop (2026-10-24)
+
+- Added and registered `VillageCropWorkGoal`. A FARMER with a usable equipped hoe can plant wheat, carrots, potatoes, or beetroot only from matching real inventory seed items on existing farmland. Mature crop drops are computed by Minecraft's block-drop system and transferred only if the complete output fits in the villager inventory.
+- The goal tracks the coordinates of crops it personally planted in that villager's persistent data and harvests only those tracked crops. This intentionally avoids harvesting arbitrary player-grown crops. Each villager's tracked plot is capped at 24 crops; scans are bounded to nearby loaded terrain and throttled.
+- This does not create seeds, water, farmland, or crops for free. It also does not yet route harvested food into a shared settlement store or prove that crops reliably reach maturity under all world conditions. Tool wear, crop growth, reload persistence, and two-villager contention still need clean-world testing.
+
