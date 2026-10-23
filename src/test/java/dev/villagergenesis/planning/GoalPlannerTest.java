@@ -13,11 +13,60 @@ class GoalPlannerTest {
     }
 
     @Test
-    void proposesExplorationAfterRepeatedMovement() {
+    void movementAloneDoesNotCountAsExplorationEvidence() {
+        VillagerMemory.Snapshot snapshot =
+                new VillagerMemory.Snapshot(0L, 100L, 80, 80, "minecraft:overworld", "observe");
+
+        assertFalse(GoalPlanner.rankGoals(snapshot, GoalPlanner.Context.memoryOnly()).stream()
+                .anyMatch(candidate -> candidate.goal().equals("explore")));
+    }
+
+    @Test
+    void explicitExplorationSignalCanProposeExploration() {
+        VillagerMemory.Snapshot snapshot =
+                new VillagerMemory.Snapshot(0L, 100L, 8, 2, "minecraft:overworld", "observe");
+        GoalPlanner.Context context = new GoalPlanner.Context(0, 100, 3650.0,
+                true, false, false, 80, 10);
+
+        assertEquals("explore", GoalPlanner.chooseGoal(snapshot, context).orElseThrow());
+    }
+
+    @Test
+    void matchingActionOutcomesAdjustOnlyThatGoalsScore() {
         VillagerMemory.Snapshot snapshot =
                 new VillagerMemory.Snapshot(0L, 100L, 8, 25, "minecraft:overworld", "observe");
+        GoalPlanner.Context context = new GoalPlanner.Context(0, 100, 3650.0,
+                true, false, false, 80, 10);
+        int neutralExplore = GoalPlanner.rankGoals(snapshot, context).stream()
+                .filter(candidate -> candidate.goal().equals("explore"))
+                .findFirst().orElseThrow().score();
+        var feedback = java.util.List.of(
+                new GoalPlanner.Feedback("explore", 0, 4, 0, "failure"),
+                new GoalPlanner.Feedback("observe", 0, 0, 0, "")
+        );
+        var ranked = GoalPlanner.rankGoals(snapshot, context, feedback);
+        int adjustedExplore = ranked.stream().filter(candidate -> candidate.goal().equals("explore"))
+                .findFirst().orElseThrow().score();
+        int adjustedObserve = ranked.stream().filter(candidate -> candidate.goal().equals("observe"))
+                .findFirst().orElseThrow().score();
 
-        assertEquals("explore", GoalPlanner.chooseGoal(snapshot).orElseThrow());
+        assertTrue(adjustedExplore < neutralExplore);
+        assertEquals(34, adjustedObserve);
+    }
+
+    @Test
+    void historicalFailureCannotLowerUrgentRetreatScore() {
+        VillagerMemory.Snapshot snapshot =
+                new VillagerMemory.Snapshot(0L, 100L, 80, 80, "minecraft:overworld", "explore");
+        GoalPlanner.Context context = new GoalPlanner.Context(90, 10, 3650.0,
+                true, false, false, 100, 10);
+        var feedback = java.util.List.of(
+                new GoalPlanner.Feedback("retreat", 0, 4, 4, "failure")
+        );
+
+        var ranked = GoalPlanner.rankGoals(snapshot, context, feedback);
+        assertEquals(280, ranked.get(0).score());
+        assertEquals("retreat", ranked.get(0).goal());
     }
 
     @Test
