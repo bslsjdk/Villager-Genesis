@@ -45,8 +45,8 @@ class SettlementPlanningServiceTest {
         var node=graph.addNode(UUID.randomUUID(),0,0,70,"minecraft:plains",85,0);
         node.updateTerrain(70,"minecraft:plains",85,100,50,50);
         node.setEstimates(4,100,0,0,0);
-        VillageOfflineSimulationService.simulateDataOnly(node,200);
-        assertTrue(node.population() > 4);
+        for(int i=1;i<=4;i++) VillageOfflineSimulationService.simulateDataOnly(node,i*200L);
+        assertTrue(node.population() >= 8);
         assertTrue(node.foodReserve() >= 0);
         assertEquals(SettlementNodeGraph.Kind.VILLAGE,node.kind());
     }
