@@ -27,7 +27,8 @@ class VillageWorkPlannerTest {
         var farm = new VillageWorkPlanner.FarmSurvey(10, 4, 0, 6, 5, 0, 8);
         var proposals = VillageWorkPlanner.plan(storage(0, 0), farm, 0, 3);
         assertFalse(proposals.stream().anyMatch(p -> p.work() == VillageWorkPlanner.Work.PLANT_EMPTY_FARMLAND));
-        assertTrue(proposals.stream().anyMatch(p -> p.work() == VillageWorkPlanner.Work.EXPAND_FARMLAND));
+        assertFalse(proposals.stream().anyMatch(p -> p.work() == VillageWorkPlanner.Work.EXPAND_FARMLAND),
+                "Do not consume land for expansion while empty farmland exists; the real blocker is seed shortage.");
     }
 
     @Test
