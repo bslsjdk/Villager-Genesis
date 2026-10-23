@@ -1,7 +1,5 @@
 package dev.villagergenesis.society;
 
-import dev.villagergenesis.economy.VisibleStorageScanner;
-
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -21,11 +19,8 @@ public final class SettlementStaffingPolicy {
                     || availableStoneItems < 0) {
                 throw new IllegalArgumentException("Survey counts cannot be negative.");
             }
-            if (Double.isNaN(foodDays) || foodDays < 0) {
-                throw new IllegalArgumentException("Food reserve days must be non-negative.");
-            }
-            if (matureCrops > residents * 64L + 4096L) {
-                throw new IllegalArgumentException("Mature crop survey is implausibly large.");
+            if (Double.isNaN(foodDays) || Double.isInfinite(foodDays) || foodDays < 0) {
+                throw new IllegalArgumentException("Food reserve days must be finite and non-negative.");
             }
         }
     }
@@ -84,7 +79,8 @@ public final class SettlementStaffingPolicy {
         VillageRoleService.Role[] trimOrder = {
                 VillageRoleService.Role.SCOUT, VillageRoleService.Role.CARETAKER,
                 VillageRoleService.Role.CRAFTER, VillageRoleService.Role.MASON,
-                VillageRoleService.Role.LUMBERJACK, VillageRoleService.Role.MAYOR
+                VillageRoleService.Role.LUMBERJACK, VillageRoleService.Role.MAYOR,
+                VillageRoleService.Role.FARMER, VillageRoleService.Role.GATHERER
         };
         for (VillageRoleService.Role role : trimOrder) {
             if (total <= survey.residents()) break;
