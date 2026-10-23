@@ -71,4 +71,13 @@ class SettlementPlanningServiceTest {
         assertTrue(node.materials() > 0);
     }
 
+
+    @Test void settlementSpecializationSurvivesGraphSaveLoad() {
+        var graph=new SettlementNodeGraph(); UUID id=UUID.randomUUID();
+        var node=graph.addNode(id,32,64,70,"minecraft:forest",85,10);
+        node.setPlanningRole("FORESTRY");
+        var restored=SettlementNodeGraph.load(graph.save(new net.minecraft.nbt.CompoundTag(),null),null);
+        assertEquals("FORESTRY",restored.node(id).planningRole());
+    }
+
 }
