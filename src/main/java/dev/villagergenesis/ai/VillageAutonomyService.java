@@ -1,5 +1,6 @@
 package dev.villagergenesis.ai;
 
+import dev.villagergenesis.society.VillageRoleService;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.Villager;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -8,7 +9,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/** Installs the optional low-priority autonomy goal once per live entity instance. */
+/** Installs the optional low-priority autonomy goals once per live entity instance. */
 public final class VillageAutonomyService {
     private static final Map<Villager, Boolean> INSTALLED =
             Collections.synchronizedMap(new WeakHashMap<>());
@@ -20,9 +21,11 @@ public final class VillageAutonomyService {
         if (!(entity instanceof Villager villager) || event.getLevel().isClientSide) return;
         synchronized (INSTALLED) {
             if (INSTALLED.containsKey(villager)) return;
-            // Let a concrete, resource-backed build preempt idle wandering, but not urgent
-            // vanilla behaviors such as panic, sleeping, or job-site work.
+            // Social identity is mod-owned and independent of the vanilla profession.
+            VillageRoleService.ensureRole(villager);
+            // Real construction may preempt farming, but urgent vanilla behaviors retain priority.
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
+            villager.goalSelector.addGoal(8, new VillageFarmWorkGoal(villager));
             villager.goalSelector.addGoal(9, new VillageExplorationGoal(villager));
             INSTALLED.put(villager, Boolean.TRUE);
         }
