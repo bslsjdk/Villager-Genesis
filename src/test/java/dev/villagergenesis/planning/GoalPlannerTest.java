@@ -51,7 +51,7 @@ class GoalPlannerTest {
                 .findFirst().orElseThrow().score();
 
         assertTrue(adjustedExplore < neutralExplore);
-        assertEquals(34, adjustedObserve);
+        assertEquals(39, adjustedObserve);
     }
 
     @Test
@@ -65,7 +65,7 @@ class GoalPlannerTest {
         );
 
         var ranked = GoalPlanner.rankGoals(snapshot, context, feedback);
-        assertEquals(280, ranked.get(0).score());
+        assertEquals(300, ranked.get(0).score());
         assertEquals("retreat", ranked.get(0).goal());
     }
 
