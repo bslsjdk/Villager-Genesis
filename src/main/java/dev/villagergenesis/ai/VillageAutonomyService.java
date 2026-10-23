@@ -30,6 +30,8 @@ public final class VillageAutonomyService {
             // Real construction may preempt farming, but urgent vanilla behaviors retain priority.
             villager.goalSelector.addGoal(6, new VillageEquipmentGoal(villager));
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
+            // Lumberjacks turn naturally grown trees into real stored building material.
+            villager.goalSelector.addGoal(8, new VillageLumberjackGoal(villager));
             // The shelter is a mod-owned construction behavior, not a duplicate of vanilla farming.
             villager.goalSelector.addGoal(8, new VillageShelterConstructionGoal(villager));
             villager.goalSelector.addGoal(9, new VillageExplorationGoal(villager));
