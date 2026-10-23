@@ -134,11 +134,11 @@ public final class VillageKnowledgeArchiveService {
     private static String formatKnowledgePage(String id) {
         KnowledgeDefinition definition = new KnowledgeRegistry().find(id).orElse(null);
         if (definition == null) {
-            return "Village Knowledge\\n\\n" + id
-                    + "\\n\\nThis archived knowledge was recorded by a villager.";
+            return "Village Knowledge\n\n" + id
+                    + "\n\nThis archived knowledge was recorded by a villager.";
         }
-        return definition.title() + "\\n\\n" + definition.description()
-                + "\\n\\nKnowledge ID: " + id;
+        return definition.title() + "\n\n" + definition.description()
+                + "\n\nKnowledge ID: " + id;
     }
 
     private static boolean visitBooks(ServerLevel level, BlockPos center, int radius, BookVisitor visitor) {
