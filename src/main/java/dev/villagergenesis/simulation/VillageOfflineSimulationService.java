@@ -83,10 +83,12 @@ public final class VillageOfflineSimulationService {
         BlockPos samplePos = new BlockPos(candidate.x(), 0, candidate.z());
         if (!level.hasChunkAt(samplePos)) return;
 
-        // Do not move either query above the loaded-chunk gate.
-        String biome = level.getBiome(samplePos).unwrapKey()
-                .map(holder -> holder.location().toString()).orElse("unknown");
+        // Both terrain queries remain below the loaded-chunk gate. Sample the biome at
+        // the surface height rather than Y=0, which may be a cave biome in modern worlds.
         int estimatedY = level.getHeight(Heightmap.Types.WORLD_SURFACE, candidate.x(), candidate.z());
+        BlockPos surfacePos = new BlockPos(candidate.x(), estimatedY, candidate.z());
+        String biome = level.getBiome(surfacePos).unwrapKey()
+                .map(holder -> holder.location().toString()).orElse("unknown");
         int terrainScore = scoreBiome(biome);
         int food = biome.contains("plains") || biome.contains("meadow") || biome.contains("river") ? 75 : 40;
         int timber = biome.contains("forest") || biome.contains("taiga") || biome.contains("grove") ? 80 : 35;
@@ -148,10 +150,12 @@ public final class VillageOfflineSimulationService {
             return;
         }
 
-        // Every terrain query is below the loaded-chunk gate.
-        String biome = level.getBiome(samplePos).unwrapKey()
-                .map(holder -> holder.location().toString()).orElse("unknown");
+        // Every terrain query is below the loaded-chunk gate. Sample the surface biome,
+        // not the Y=0 cave layer.
         int estimatedY = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+        BlockPos surfacePos = new BlockPos(x, estimatedY, z);
+        String biome = level.getBiome(surfacePos).unwrapKey()
+                .map(holder -> holder.location().toString()).orElse("unknown");
         int terrainScore = scoreBiome(biome);
         if (terrainScore < 20) return;
 
