@@ -50,14 +50,14 @@ public final class VillageStructureRegistry extends SavedData {
      * Registers a block only after its placement succeeded. A position already owned by another
      * structure is never silently overwritten.
      */
-    public boolean registerPlacedBlock(BlockPos pos, String structureType, UUID builder) {
+    public boolean registerPlacedBlock(BlockPos pos, String structureType, UUID builder, long placedAt) {
         long key = pos.asLong();
         OwnedBlock existing = ownedBlocks.get(key);
         if (existing != null) {
             return existing.structureType().equals(structureType)
                     && existing.builder().equals(builder);
         }
-        ownedBlocks.put(key, new OwnedBlock(pos, structureType, builder, 0L));
+        ownedBlocks.put(key, new OwnedBlock(pos, structureType, builder, placedAt));
         setDirty();
         return true;
     }
