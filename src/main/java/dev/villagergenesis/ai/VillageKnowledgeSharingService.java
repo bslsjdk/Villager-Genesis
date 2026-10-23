@@ -66,13 +66,12 @@ public final class VillageKnowledgeSharingService {
 
         // Archive one new fact per teaching cycle. This avoids rewriting the same first fact
         // forever while keeping all storage and item counts physical and player-visible.
-        for (String candidate : known.stream()
+        String archiveCandidate = known.stream()
                 .filter(id -> !KnowledgeBaseline.isBaseline(id))
                 .filter(id -> !archivedKnowledge.contains(id))
-                .sorted().toList()) {
-            if (VillageKnowledgeArchiveService.archiveOne(level, teacher.blockPosition(), candidate)) {
-                break;
-            }
+                .sorted().findFirst().orElse(null);
+        if (archiveCandidate != null) {
+            VillageKnowledgeArchiveService.archiveOne(level, teacher.blockPosition(), archiveCandidate);
         }
 
         var nearby = level.getEntitiesOfClass(Villager.class,
