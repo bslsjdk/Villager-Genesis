@@ -80,4 +80,20 @@ class SettlementPlanningServiceTest {
         assertEquals("FORESTRY",restored.node(id).planningRole());
     }
 
+
+    @Test void recoveredInterruptedTaskCountsAnotherAttempt() {
+        var graph=new SettlementNodeGraph(); UUID id=UUID.randomUUID();
+        var node=graph.addNode(id,0,0,70,"minecraft:plains",85,0);
+        node.updateTerrain(70,"minecraft:plains",85,90,30,35);
+        var queue=new SettlementTaskQueue();
+        var task=queue.enqueueUnique(id,SettlementTaskQueue.Type.PLAN_SETTLEMENT,10);
+        queue.claimForProcessing(task.id(),11);
+        var restored=SettlementTaskQueue.load(queue.save(new net.minecraft.nbt.CompoundTag(),null),null);
+        var recovered=restored.tasks().get(0);
+        assertEquals(1,recovered.attempts());
+        assertTrue(SettlementPlanningService.processOne(graph,restored,20));
+        assertEquals(2,recovered.attempts());
+        assertEquals(SettlementTaskQueue.Status.COMPLETE,recovered.status());
+    }
+
 }
