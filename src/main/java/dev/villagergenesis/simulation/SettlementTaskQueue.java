@@ -47,9 +47,15 @@ public final class SettlementTaskQueue extends SavedData {
         Task task=new Task(UUID.randomUUID(),nodeId,type,Status.PENDING,0,0,gameTime,gameTime,"","");
         tasks.add(task); setDirty(); return task;
     }
+    /**
+     * Returns the oldest queued task, including IN_PROGRESS tasks left by a server crash.
+     * Processing is idempotent and may safely resume a data-only plan after restart.
+     */
     public Task peekPending() {
-        return tasks.stream().filter(t->t.status==Status.PENDING)
-                .min(Comparator.comparingLong(Task::createdAt).thenComparing(t->t.id.toString())).orElse(null);
+        return tasks.stream()
+                .filter(t -> t.status == Status.PENDING || t.status == Status.IN_PROGRESS)
+                .min(Comparator.comparingLong(Task::createdAt).thenComparing(t -> t.id.toString()))
+                .orElse(null);
     }
     public boolean update(UUID taskId, Status status, int progress, long gameTime) {
         Objects.requireNonNull(taskId,"taskId"); Objects.requireNonNull(status,"status");
