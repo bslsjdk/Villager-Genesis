@@ -12,11 +12,23 @@ public final class SettlementStaffingPolicy {
     public record Survey(int residents, double foodDays, int matureCrops,
                          int emptyHydratedFarmland, int unhousedResidents,
                          int availableWoodItems, int availableStoneItems,
-                         boolean storageSurveyComplete) {
+                         boolean storageSurveyComplete,
+                         int nearbyWildAnimals, int pennedBreedableAnimals,
+                         int availableWoolItems, int availablePlankItems, int availableBeds) {
+        /** Compatibility constructor for callers that have not wired in animal/housing surveys yet. */
+        public Survey(int residents, double foodDays, int matureCrops,
+                      int emptyHydratedFarmland, int unhousedResidents,
+                      int availableWoodItems, int availableStoneItems,
+                      boolean storageSurveyComplete) {
+            this(residents, foodDays, matureCrops, emptyHydratedFarmland, unhousedResidents,
+                    availableWoodItems, availableStoneItems, storageSurveyComplete, 0, 0, 0, 0, 0);
+        }
         public Survey {
             if (residents < 0 || matureCrops < 0 || emptyHydratedFarmland < 0
                     || unhousedResidents < 0 || availableWoodItems < 0
-                    || availableStoneItems < 0) {
+                    || availableStoneItems < 0 || nearbyWildAnimals < 0
+                    || pennedBreedableAnimals < 0 || availableWoolItems < 0
+                    || availablePlankItems < 0 || availableBeds < 0) {
                 throw new IllegalArgumentException("Survey counts cannot be negative.");
             }
             if (Double.isNaN(foodDays) || Double.isInfinite(foodDays) || foodDays < 0) {
@@ -56,6 +68,18 @@ public final class SettlementStaffingPolicy {
             targets.put(VillageRoleService.Role.BUILDER,
                     Math.min(Math.max(1, survey.unhousedResidents()), Math.max(1, survey.residents() / 3)));
         }
+
+        // Animal jobs are requested only when the survey has real, nearby work to do.
+        // A food shortage alone is not evidence that wildlife or a viable herd exists.
+        if (foodShort && survey.nearbyWildAnimals() > 0) {
+            targets.put(VillageRoleService.Role.HUNTER,
+                    survey.residents() >= 12 ? 2 : 1);
+        }
+        if (survey.pennedBreedableAnimals() > 0
+                || (survey.unhousedResidents() > 0 && survey.availableWoolItems() < survey.unhousedResidents() * 3
+                    && survey.nearbyWildAnimals() > 1)) {
+            targets.put(VillageRoleService.Role.HERDER, 1);
+        }
         if (survey.storageSurveyComplete()) {
             if (survey.availableWoodItems() < Math.max(16, survey.residents() * 4)) {
                 targets.put(VillageRoleService.Role.LUMBERJACK, 1);
@@ -78,6 +102,7 @@ public final class SettlementStaffingPolicy {
         int total = targets.values().stream().mapToInt(Integer::intValue).sum();
         VillageRoleService.Role[] trimOrder = {
                 VillageRoleService.Role.SCOUT, VillageRoleService.Role.CARETAKER,
+                VillageRoleService.Role.HUNTER, VillageRoleService.Role.HERDER,
                 VillageRoleService.Role.CRAFTER, VillageRoleService.Role.MASON,
                 VillageRoleService.Role.LUMBERJACK, VillageRoleService.Role.MAYOR,
                 VillageRoleService.Role.FARMER, VillageRoleService.Role.GATHERER
