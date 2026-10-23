@@ -34,14 +34,17 @@ public final class VillageKnowledgeArchiveService {
     /** Write one knowledge ID into a real book already stored in a public container. */
     public static boolean archiveOne(ServerLevel level, BlockPos center, String knowledgeId) {
         if (knowledgeId == null || knowledgeId.isBlank()) return false;
-        return visitBooks(level, center, DEFAULT_RADIUS, (container, slot, stack) -> {
+        final boolean[] wrote = {false};
+        boolean found = visitBooks(level, center, DEFAULT_RADIUS, (container, slot, stack) -> {
             Set<String> archived = readKnowledge(stack);
             if (archived.contains(knowledgeId)) return true;
             archived.add(knowledgeId);
             writeKnowledge(stack, archived);
             container.setChanged();
+            wrote[0] = true;
             return true;
         });
+        return found && wrote[0];
     }
 
     /** Return the first archived knowledge this villager has not learned yet. */
