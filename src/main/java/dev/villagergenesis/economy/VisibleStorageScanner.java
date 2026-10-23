@@ -24,7 +24,7 @@ public final class VisibleStorageScanner {
     public static final int DEFAULT_RADIUS = 12;
 
     public enum Resource {
-        BREAD, CARROTS, POTATOES, BEETROOT, WHEAT, SEEDS, WOOD, STONE,
+        BREAD, CARROTS, POTATOES, BEETROOT, WHEAT, SEEDS, WOOD, PLANKS, WOOL_WHITE, WOOL_ORANGE, WOOL_MAGENTA, WOOL_LIGHT_BLUE, WOOL_YELLOW, WOOL_LIME, WOOL_PINK, WOOL_GRAY, WOOL_LIGHT_GRAY, WOOL_CYAN, WOOL_PURPLE, WOOL_BLUE, WOOL_BROWN, WOOL_GREEN, WOOL_RED, WOOL_BLACK, BEDS, STONE,
         COAL, RAW_IRON, RAW_COPPER, RAW_GOLD, IRON_INGOTS, COPPER_INGOTS, GOLD_INGOTS,
         PICKAXES, AXES, OTHER
     }
@@ -128,6 +128,28 @@ public final class VisibleStorageScanner {
 
     private static Resource classify(Item item) {
         if (item == Items.BREAD) return Resource.BREAD;
+        if (item == Items.WHITE_WOOL) return Resource.WOOL_WHITE;
+        if (item == Items.ORANGE_WOOL) return Resource.WOOL_ORANGE;
+        if (item == Items.MAGENTA_WOOL) return Resource.WOOL_MAGENTA;
+        if (item == Items.LIGHT_BLUE_WOOL) return Resource.WOOL_LIGHT_BLUE;
+        if (item == Items.YELLOW_WOOL) return Resource.WOOL_YELLOW;
+        if (item == Items.LIME_WOOL) return Resource.WOOL_LIME;
+        if (item == Items.PINK_WOOL) return Resource.WOOL_PINK;
+        if (item == Items.GRAY_WOOL) return Resource.WOOL_GRAY;
+        if (item == Items.LIGHT_GRAY_WOOL) return Resource.WOOL_LIGHT_GRAY;
+        if (item == Items.CYAN_WOOL) return Resource.WOOL_CYAN;
+        if (item == Items.PURPLE_WOOL) return Resource.WOOL_PURPLE;
+        if (item == Items.BLUE_WOOL) return Resource.WOOL_BLUE;
+        if (item == Items.BROWN_WOOL) return Resource.WOOL_BROWN;
+        if (item == Items.GREEN_WOOL) return Resource.WOOL_GREEN;
+        if (item == Items.RED_WOOL) return Resource.WOOL_RED;
+        if (item == Items.BLACK_WOOL) return Resource.WOOL_BLACK;
+        if (item == Items.WHITE_BED || item == Items.ORANGE_BED || item == Items.MAGENTA_BED
+                || item == Items.LIGHT_BLUE_BED || item == Items.YELLOW_BED || item == Items.LIME_BED
+                || item == Items.PINK_BED || item == Items.GRAY_BED || item == Items.LIGHT_GRAY_BED
+                || item == Items.CYAN_BED || item == Items.PURPLE_BED || item == Items.BLUE_BED
+                || item == Items.BROWN_BED || item == Items.GREEN_BED || item == Items.RED_BED
+                || item == Items.BLACK_BED) return Resource.BEDS;
         if (item == Items.CARROT) return Resource.CARROTS;
         if (item == Items.POTATO) return Resource.POTATOES;
         if (item == Items.BEETROOT) return Resource.BEETROOT;
@@ -149,11 +171,19 @@ public final class VisibleStorageScanner {
                 || item == Items.GOLDEN_AXE || item == Items.DIAMOND_AXE || item == Items.NETHERITE_AXE) {
             return Resource.AXES;
         }
+        if (isPlanks(item)) return Resource.PLANKS;
         if (isWood(item)) return Resource.WOOD;
         if (item == Items.COBBLESTONE || item == Items.STONE || item == Items.ANDESITE
                 || item == Items.DIORITE || item == Items.GRANITE || item == Items.COBBLED_DEEPSLATE
                 || item == Items.DEEPSLATE_BRICKS || item == Items.BRICKS) return Resource.STONE;
         return Resource.OTHER;
+    }
+
+    private static boolean isPlanks(Item item) {
+        return item == Items.OAK_PLANKS || item == Items.SPRUCE_PLANKS || item == Items.BIRCH_PLANKS
+                || item == Items.JUNGLE_PLANKS || item == Items.ACACIA_PLANKS || item == Items.DARK_OAK_PLANKS
+                || item == Items.MANGROVE_PLANKS || item == Items.CHERRY_PLANKS
+                || item == Items.BAMBOO_PLANKS || item == Items.CRIMSON_PLANKS || item == Items.WARPED_PLANKS;
     }
 
     private static boolean isWood(Item item) {
