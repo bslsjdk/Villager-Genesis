@@ -54,8 +54,17 @@ public final class VillageKnowledgeSharingService {
         int bookSearchRadius = librarian ? 16 : 8;
         var archivedKnowledge = VillageKnowledgeArchiveService.listArchivedKnowledge(
                 level, teacher.blockPosition(), bookSearchRadius);
+        KnowledgeRegistry registry = new KnowledgeRegistry();
+        var knownBeforeReading = sourceMemory.knownKnowledge();
+        // Physical books are untrusted input: accept only registered lessons whose prerequisites
+        // are already satisfied. A forged/old archive must not inject arbitrary IDs or skip a course.
+        var eligibleLessons = KnowledgeLearningPlanner.recommendLearning(
+                registry, knownBeforeReading, 0, registry.all().size());
+        var eligibleIds = eligibleLessons.stream()
+                .map(definition -> definition.id())
+                .collect(java.util.stream.Collectors.toSet());
         var unknownArchived = archivedKnowledge.stream()
-                .filter(id -> !sourceMemory.knownKnowledge().contains(id))
+                .filter(eligibleIds::contains)
                 .sorted()
                 .limit(genius ? 3 : 1)
                 .toList();
@@ -75,7 +84,6 @@ public final class VillageKnowledgeSharingService {
                 .sorted(Comparator.comparingDouble(teacher::distanceToSqr))
                 .toList();
 
-        KnowledgeRegistry registry = new KnowledgeRegistry();
         Villager student = null;
         String teachable = null;
         for (Villager candidate : nearby) {
