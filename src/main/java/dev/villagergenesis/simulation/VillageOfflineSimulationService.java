@@ -2,6 +2,7 @@ package dev.villagergenesis.simulation;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import dev.villagergenesis.society.LocalVillagerGroupTracker;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -41,6 +42,10 @@ public final class VillageOfflineSimulationService {
                 NEXT_LEVEL_STEP.entrySet().removeIf(entry -> entry.getValue() <= now);
             }
         }
+
+        // Discover autonomous groups from live villagers first; this does not depend on abstract
+        // terrain nodes or existing vanilla village POIs.
+        LocalVillagerGroupTracker.get(level).observeLoadedVillagers(level, now, 256);
 
         SettlementNodeGraph graph = SettlementNodeGraph.get(level);
         SettlementTaskQueue queue = SettlementTaskQueue.get(level);
