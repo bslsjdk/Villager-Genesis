@@ -29,7 +29,7 @@ import java.util.List;
  * rolls back its block placements and inventory consumption if any placement fails.
  */
 public final class VillageShelterConstructionGoal extends Goal {
-    private static final int REQUIRED_PLANKS = 33;
+    private static final int REQUIRED_BLOCKS = 33;
     private static final int SCAN_COOLDOWN = 600;
     private static final int MAX_TRAVEL_TICKS = 240;
     private final Villager villager;
@@ -124,7 +124,7 @@ public final class VillageShelterConstructionGoal extends Goal {
             if (!level.hasChunkAt(pos) || !(level.getBlockEntity(pos) instanceof Container container)) continue;
             for (int slot = 0; slot < container.getContainerSize(); slot++) {
                 ItemStack stack = container.getItem(slot);
-                if (stack.is(material) && stack.getCount() >= REQUIRED_PLANKS) {
+                if (stack.is(material) && stack.getCount() >= REQUIRED_BLOCKS) {
                     sourceSlot = slot;
                     return pos;
                 }
@@ -189,9 +189,9 @@ public final class VillageShelterConstructionGoal extends Goal {
                 || sourceSlot < 0 || sourceSlot >= container.getContainerSize()) return;
         ItemStack stored = container.getItem(sourceSlot);
         net.minecraft.world.item.Item material = constructionMaterial();
-        if (!stored.is(material) || stored.getCount() < REQUIRED_PLANKS) return;
+        if (!stored.is(material) || stored.getCount() < REQUIRED_BLOCKS) return;
 
-        List<BlockPos> positions = new ArrayList<>(REQUIRED_PLANKS);
+        List<BlockPos> positions = new ArrayList<>(REQUIRED_BLOCKS);
         for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) positions.add(site.offset(x, 0, z));
         // Two perimeter wall layers, with a door opening in the south-facing lower wall.
         for (int y = 1; y <= 2; y++) {
@@ -203,7 +203,7 @@ public final class VillageShelterConstructionGoal extends Goal {
             }
         }
         for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) positions.add(site.offset(x, 3, z));
-        if (positions.size() != REQUIRED_PLANKS) return;
+        if (positions.size() != REQUIRED_BLOCKS) return;
         for (BlockPos pos : positions) {
             if (!level.hasChunkAt(pos) || !level.getBlockState(pos).isAir()) return;
         }
@@ -220,7 +220,7 @@ public final class VillageShelterConstructionGoal extends Goal {
             }
             placed.add(pos);
         }
-        stored.shrink(REQUIRED_PLANKS);
+        stored.shrink(REQUIRED_BLOCKS);
         if (stored.isEmpty()) container.setItem(sourceSlot, ItemStack.EMPTY);
         container.setChanged();
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, site.getX() + 0.5D,
