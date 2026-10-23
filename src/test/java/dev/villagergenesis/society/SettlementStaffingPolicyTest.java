@@ -38,6 +38,31 @@ class SettlementStaffingPolicyTest {
     }
 
     @Test
+    void animalRolesRequireEvidenceAndScaleWithinPopulation() {
+        var noAnimals = SettlementStaffingPolicy.desiredSlots(
+                new SettlementStaffingPolicy.Survey(12, 0.5, 0, 0, 0, 100, 100, true));
+        assertEquals(0, noAnimals.get(VillageRoleService.Role.HUNTER));
+        assertEquals(0, noAnimals.get(VillageRoleService.Role.HERDER));
+
+        var surveyed = SettlementStaffingPolicy.desiredSlots(
+                new SettlementStaffingPolicy.Survey(12, 0.5, 0, 0, 0,
+                        100, 100, true, 8, 3, 0, 12, 0));
+        assertEquals(2, surveyed.get(VillageRoleService.Role.HUNTER));
+        assertEquals(1, surveyed.get(VillageRoleService.Role.HERDER));
+        assertTrue(surveyed.values().stream().mapToInt(Integer::intValue).sum() <= 12);
+    }
+
+    @Test
+    void rejectsNegativeAnimalAndHousingEvidence() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new SettlementStaffingPolicy.Survey(4, 1, 0, 0, 0,
+                        0, 0, true, -1, 0, 0, 0, 0));
+        assertThrows(IllegalArgumentException.class,
+                () -> new SettlementStaffingPolicy.Survey(4, 1, 0, 0, 0,
+                        0, 0, true, 0, 0, 0, 0, -1));
+    }
+
+    @Test
     void rejectsInvalidSurvey() {
         assertThrows(IllegalArgumentException.class,
                 () -> new SettlementStaffingPolicy.Survey(4, -1, 0, 0, 0, 0, 0, true));
