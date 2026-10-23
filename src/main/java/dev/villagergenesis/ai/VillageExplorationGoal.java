@@ -4,6 +4,9 @@ import dev.villagergenesis.memory.VillagerMemory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.Level;
@@ -80,6 +83,11 @@ public final class VillageExplorationGoal extends Goal {
     public void start() {
         travelTicks = 0;
         villager.getPersistentData().putString("villager_genesis_current_goal", "explore");
+        // Make the start of a mod-owned decision observable without spamming particles every tick.
+        if (villager.level() instanceof ServerLevel level) {
+            level.sendParticles(ParticleTypes.HAPPY_VILLAGER, villager.getX(),
+                    villager.getY() + 1.0D, villager.getZ(), 2, 0.2D, 0.2D, 0.2D, 0.01D);
+        }
         villager.getNavigation().moveTo(destination.getX() + 0.5, destination.getY(),
                 destination.getZ() + 0.5, 0.65D);
     }
@@ -108,6 +116,10 @@ public final class VillageExplorationGoal extends Goal {
                         "Reached the selected safe waypoint.", now);
                 memory.learnKnowledge("local_exploration");
                 rememberWaypoint(villager, destination);
+                level.sendParticles(ParticleTypes.HAPPY_VILLAGER, villager.getX(),
+                        villager.getY() + 1.0D, villager.getZ(), 8, 0.3D, 0.4D, 0.3D, 0.02D);
+                level.playSound(null, villager.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP,
+                        SoundSource.NEUTRAL, 0.35F, 1.6F);
             } else if (travelTicks >= MAX_TRAVEL_TICKS) {
                 VillagerMemory.forVillager(villager).recordActionOutcome("explore", "failure",
                         "Travel exceeded the exploration time budget.", now);
