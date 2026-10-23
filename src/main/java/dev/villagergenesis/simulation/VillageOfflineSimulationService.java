@@ -43,7 +43,10 @@ public final class VillageOfflineSimulationService {
         SettlementNodeGraph graph = SettlementNodeGraph.get(level);
         seedOneCandidate(level, graph, now);
         if (!graph.nodes().isEmpty()) {
-            graph.rebuildLocalEdges(GRAPH_NODE_BUDGET, GRAPH_NEIGHBOURS, now);
+            int nodeCount = graph.nodes().size();
+            // Spend more on graph quality while small; taper work as the graph grows.
+            int adaptiveBudget = nodeCount < 32 ? 4 : nodeCount < 128 ? 2 : GRAPH_NODE_BUDGET;
+            graph.rebuildLocalEdges(adaptiveBudget, GRAPH_NEIGHBOURS, now);
             advanceOneNode(level, graph, now);
         }
     }
