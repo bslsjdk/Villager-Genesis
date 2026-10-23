@@ -93,3 +93,12 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - The existing 40-tick server-level scheduler now invokes the tracker with a per-scan cap of 256 live villagers. Group membership uses bounded proximity and a maximum group size; absent entities are not immediately treated as dead or permanently departed.
 - This is the first live discovery/persistence step, not a finished settlement simulation. It currently does not yet survey actual beds, food stocks, farm plots, safe build sites, or completed shared projects, and it deliberately does not promote groups to camps/villages until those real-world checks are wired in. It does not yet assign persistent settlement IDs to the existing role allocator or create a shared task queue per live group.
 - The stage-model CI failure was traced to the progression test restarting its simulated timestamp at an earlier value between helper calls. The test now keeps the simulated game clock monotonic. The updated Actions run must still pass before this is called CI-verified.
+
+
+## Real wood supply (new; CI pending)
+
+- Registered `VillageLumberjackGoal` for the existing persistent LUMBERJACK role. A GATHERER can also learn `wood_harvesting` after a successful task, enabling later skill sharing/role adaptation.
+- The goal looks only in a small radius of already-loaded terrain, checks for logs connected vertically and nearby leaves, rejects obvious structure markers and nearby block entities, and harvests one trunk block per trip.
+- It requires an existing nearby container with an empty slot. It calculates the block's real drops, breaks the block without spawning duplicate drops, then stores the computed item stack. No wood is fabricated and no chunk is requested.
+- Safety limitation: tree-vs-player-build detection is heuristic, not a perfect ownership system. The current implementation is intentionally conservative and only cuts one log per trip; it needs in-game testing around player-built log structures and different tree types before broadening the harvest rules.
+- This provides a real wood acquisition path for later storage/shelter construction, but it does not yet guarantee the lumberjack is staffed when a new group has no saved role policy, or provide a container-free starter phase. Group-based staffing and resource surveying remain pending.
