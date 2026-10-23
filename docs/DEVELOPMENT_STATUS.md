@@ -42,7 +42,8 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Commit 9b459216e980f3eb0a8a9ec71c502ee78e57c79a: records hostile-awareness knowledge only after a successful escape.
 - Commit f7644a1d2a38a1f023f0bf64890132b49dfc3e42: Build run #294 / 40005844030 passed, including Build and test and JAR upload.
 - Follow-up correctness fix afdca3579f2acb8d7c4389c0e2510e4211806e67: a threat disappearing no longer counts as a successful escape or grants hostile-awareness knowledge. CI run #296 / 40006359081 was still running at last check.
-- Commits 244cdf64aee045a291835804de8d1e916be0d69f and 9d7babdc8513a61f8de70a700767880122090e38 add a deterministic, side-effect-free role staffing proposal engine and unit tests. CI run #297 / 40006433741 was still running at last check; runtime integration is not implemented.
+- Commits 244cdf64aee045a291835804de8d1e916be0d69f and 9d7babdc8513a61f8de70a700767880122090e38 add a deterministic, side-effect-free role staffing proposal engine and unit tests.
+- Commits e4bc9516ba8bea6f32198d0b8c62b1f4cb6cbd17 and 3d47189e76cf488fe743d0fd317f8a22b8c55694 add SettlementStaffingPolicy: bounded staffing targets from food reserve, surveyed farm workload, housing shortage, and confirmed storage survey. It explicitly avoids inferring lumberjack/mason shortages when storage survey is incomplete. The policy and staffing planner are pure proposal layers, not yet connected to a live settlement roster. CI for these newest commits must be checked.
 - No guard combat or resident escape behavior has been tested in a running Minecraft world.
 
 ## Unfinished work that must not be forgotten
@@ -53,7 +54,7 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 5. Implement durability-aware equipment maintenance and replacement only from real available supplies.
 6. Coordinate guards so protection is distributed rather than every guard pursuing the same target; define defense radius and posting behavior.
 7. Improve after-event learning based on observed outcomes, not arbitrary skill grants.
-8. Wire RoleStaffingPlanner into settlement-scoped membership and periodic staffing decisions; add hysteresis/cooldowns so roles do not oscillate when needs fluctuate. Keep role assignment changes explicit and persistent.
+8. Connect SettlementStaffingPolicy and RoleStaffingPlanner to settlement-scoped membership discovery, then apply changes only through a persistent, cooldown-limited service. Add hysteresis so staffing does not oscillate when needs fluctuate. Keep role assignment changes explicit and persistent.
 9. Implement real gathering, crafting, logistics, mentorship/knowledge transfer, and career mobility without duplicating vanilla systems.
 10. Settlement simulation (food, housing, population, territory, diplomacy, etc.) remains incomplete; do not claim otherwise based on metadata alone.
 11. Regression-check scan frequency, cooldowns, goal interruption, inventory races, persistence, loaded-chunk safety, and player-build protection.
