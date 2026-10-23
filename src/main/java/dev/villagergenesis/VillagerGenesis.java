@@ -18,7 +18,6 @@ public final class VillagerGenesis {
     public VillagerGenesis(IEventBus modEventBus, ModContainer modContainer) {
         NeoForge.EVENT_BUS.addListener(VillagerMemoryService::onEntityTickPost);
         NeoForge.EVENT_BUS.addListener(VillageAutonomyService::onEntityJoinLevel);
-        NeoForge.EVENT_BUS.addListener(VillageOfflineSimulationService::onVillagerJoin);
         NeoForge.EVENT_BUS.addListener(VillageOfflineSimulationService::onLevelTick);
         LOGGER.info("Villager Genesis initialized. Bounded settlement simulation and low-priority autonomy are enabled.");
     }
