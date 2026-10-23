@@ -35,8 +35,12 @@ public final class VillageKnowledgeSharingService {
             return;
         }
 
+        boolean librarian = teacher.getVillagerData().getProfession()
+                == net.minecraft.world.entity.npc.VillagerProfession.LIBRARIAN;
         long regionKey = (((long) (teacher.blockPosition().getX() >> 5)) << 32)
                 ^ ((teacher.blockPosition().getZ() >> 5) & 0xffffffffL);
+        // Keep librarian's wider scan budget separate so an ordinary villager cannot starve it.
+        if (librarian) regionKey ^= 0x8000000000000000L;
         boolean scanArchive;
         synchronized (NEXT_REGION_SCAN) {
             Map<Long, Long> regions = NEXT_REGION_SCAN.computeIfAbsent(level,
@@ -52,8 +56,6 @@ public final class VillageKnowledgeSharingService {
 
         // Throttle expensive physical-container scans, not the whole teaching system. Otherwise
         // the first villager ticking in a region suppresses every other villager's teaching.
-        boolean librarian = teacher.getVillagerData().getProfession()
-                == net.minecraft.world.entity.npc.VillagerProfession.LIBRARIAN;
         int bookSearchRadius = librarian ? 16 : 8;
         var archivedKnowledge = scanArchive
                 ? VillageKnowledgeArchiveService.listArchivedKnowledge(
