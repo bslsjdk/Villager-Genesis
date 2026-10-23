@@ -129,8 +129,8 @@ public final class VillageFarmWorkGoal extends Goal {
         travelTicks = 0;
     }
 
-    private void harvestAndReplant(ServerLevel level) {
-        if (target == null || !level.hasChunkAt(target) || !level.hasChunkAt(target.below())) return;
+    private int harvestAndReplant(ServerLevel level) {
+        if (target == null || !level.hasChunkAt(target) || !level.hasChunkAt(target.below())) return 0;
         BlockState state = level.getBlockState(target);
         if (!(state.getBlock() instanceof CropBlock crop) || !crop.isMaxAge(state)
                 || !level.getBlockState(target.below()).is(Blocks.FARMLAND)) return 0;
@@ -153,8 +153,10 @@ public final class VillageFarmWorkGoal extends Goal {
                 level.sendParticles(ParticleTypes.HAPPY_VILLAGER, target.getX() + 0.5D,
                         target.getY() + 0.8D, target.getZ() + 0.5D, 5, 0.2D, 0.2D, 0.2D, 0.01D);
                 level.playSound(null, target, SoundEvents.CROP_PLANTED, SoundSource.BLOCKS, 0.35F, 1.0F);
+                return 2;
             }
         }
+        return 1;
     }
 
     private int findSeedSlot(Item seed) {
