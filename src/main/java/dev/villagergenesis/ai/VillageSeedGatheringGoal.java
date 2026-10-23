@@ -149,7 +149,7 @@ public final class VillageSeedGatheringGoal extends Goal {
             if (state.hasBlockEntity() || state.is(Blocks.CRAFTING_TABLE) || state.is(Blocks.CHEST)
                     || state.is(Blocks.TRAPPED_CHEST) || state.is(Blocks.BARREL)
                     || state.is(Blocks.FURNACE) || state.is(Blocks.BLAST_FURNACE) || state.is(Blocks.SMOKER)
-                    || state.is(Blocks.BED) || state.is(Blocks.DIRT_PATH)
+                    || state.is(Blocks.DIRT_PATH)
                     || state.is(net.minecraft.tags.BlockTags.BEDS) || state.is(net.minecraft.tags.BlockTags.DOORS)
                     || state.getBlock() instanceof net.minecraft.world.level.block.CropBlock) return true;
         }
