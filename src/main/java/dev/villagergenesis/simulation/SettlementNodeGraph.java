@@ -142,6 +142,7 @@ public final class SettlementNodeGraph extends SavedData {
     private final Map<String, Edge> edges = new HashMap<>();
     // Persisted cursor prevents low-UUID nodes from monopolizing the bounded graph budget.
     private int edgeCursor = 0;
+    private int candidateCursor = 0;
 
     public static SettlementNodeGraph get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
@@ -157,6 +158,11 @@ public final class SettlementNodeGraph extends SavedData {
     }
 
     public Node node(UUID id) { return nodes.get(id); }
+    public int candidateCursor() { return candidateCursor; }
+    public void advanceCandidateCursor() {
+        candidateCursor = candidateCursor == Integer.MAX_VALUE ? 0 : candidateCursor + 1;
+        setDirty();
+    }
     public List<Node> nodes() { return Collections.unmodifiableList(new ArrayList<>(nodes.values())); }
     public List<Edge> edges() { return Collections.unmodifiableList(new ArrayList<>(edges.values())); }
 
@@ -280,6 +286,7 @@ public final class SettlementNodeGraph extends SavedData {
             graph.nodes.put(n.id, n);
         }
         graph.edgeCursor = Math.max(0, tag.getInt("edge_cursor"));
+        graph.candidateCursor = Math.max(0, tag.getInt("candidate_cursor"));
         ListTag edges = tag.getList("edges", Tag.TAG_COMPOUND);
         for (int i = 0; i < edges.size(); i++) {
             CompoundTag e = edges.getCompound(i);
@@ -322,6 +329,7 @@ public final class SettlementNodeGraph extends SavedData {
             edgeList.add(e);
         }
         tag.putInt("edge_cursor", edgeCursor);
+        tag.putInt("candidate_cursor", candidateCursor);
         tag.put("nodes", nodeList);
         tag.put("edges", edgeList);
         return tag;
