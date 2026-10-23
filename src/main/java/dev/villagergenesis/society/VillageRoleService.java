@@ -21,7 +21,6 @@ public final class VillageRoleService {
         CRAFTER("crafter"),
         MINER("miner"),
         LUMBERJACK("lumberjack"),
-        BLACKSMITH("blacksmith"),
         MAYOR("mayor"),
         GUARD("guard"),
         SCOUT("scout"),
@@ -40,7 +39,7 @@ public final class VillageRoleService {
     private static final List<Role> INITIAL_ROLES = List.of(
             Role.FARMER, Role.FARMER, Role.BUILDER, Role.GATHERER,
             Role.GATHERER, Role.CRAFTER, Role.MINER, Role.LUMBERJACK,
-            Role.BLACKSMITH, Role.MAYOR, Role.GUARD, Role.SCOUT, Role.CARETAKER
+            Role.MAYOR, Role.GUARD, Role.SCOUT, Role.CARETAKER
     );
 
     private VillageRoleService() {}
@@ -65,5 +64,13 @@ public final class VillageRoleService {
 
     public static Role roleOf(Villager villager) {
         return Role.fromId(villager.getPersistentData().getString(ROLE_KEY));
+    }
+
+    /** Reuse Minecraft professions for smith work instead of inventing a duplicate social role. */
+    public static boolean isVanillaSmith(Villager villager) {
+        var profession = villager.getVillagerData().getProfession();
+        return profession == net.minecraft.world.entity.npc.VillagerProfession.TOOLSMITH
+                || profession == net.minecraft.world.entity.npc.VillagerProfession.WEAPONSMITH
+                || profession == net.minecraft.world.entity.npc.VillagerProfession.ARMORER;
     }
 }
