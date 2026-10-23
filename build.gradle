@@ -18,17 +18,13 @@ sourceSets.main.resources {
 
 neoForge {
     version = project.neo_version
-
     runs {
-        client {
-            client()
-        }
+        client { client() }
         server {
             server()
             programArgument '--nogui'
         }
     }
-
     mods {
         "${mod_id}" {
             sourceSet(sourceSets.main)
