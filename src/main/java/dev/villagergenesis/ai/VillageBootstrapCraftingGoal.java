@@ -179,9 +179,10 @@ public final class VillageBootstrapCraftingGoal extends Goal {
                 inventory.setItem(i, output.copy());
                 output.setCount(0);
             } else if (ItemStack.isSameItemSameComponents(stack, output)
-                    && stack.getCount() + output.getCount() <= stack.getMaxStackSize()) {
-                stack.grow(output.getCount());
-                output.setCount(0);
+                    && stack.getCount() < stack.getMaxStackSize()) {
+                int moved = Math.min(output.getCount(), stack.getMaxStackSize() - stack.getCount());
+                stack.grow(moved);
+                output.shrink(moved);
             }
         }
     }
