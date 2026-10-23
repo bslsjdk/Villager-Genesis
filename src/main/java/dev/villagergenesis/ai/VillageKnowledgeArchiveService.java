@@ -36,7 +36,7 @@ public final class VillageKnowledgeArchiveService {
         if (knowledgeId == null || knowledgeId.isBlank()) return false;
         return visitBooks(level, center, DEFAULT_RADIUS, (container, slot, stack) -> {
             Set<String> archived = readKnowledge(stack);
-            if (archived.contains(knowledgeId)) return false;
+            if (archived.contains(knowledgeId)) return true;
             archived.add(knowledgeId);
             writeKnowledge(stack, archived);
             container.setChanged();
