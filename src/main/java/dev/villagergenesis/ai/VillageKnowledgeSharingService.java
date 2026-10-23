@@ -28,13 +28,18 @@ public final class VillageKnowledgeSharingService {
 
         // A physical book can outlive its author. Villagers can recover archived knowledge
         // before teaching, so knowledge does not disappear with one particular resident.
-        String archived = VillageKnowledgeArchiveService.findUnknownKnowledge(
-                level, teacher.blockPosition(), sourceMemory.knownKnowledge());
+        var archivedKnowledge = VillageKnowledgeArchiveService.listArchivedKnowledge(
+                level, teacher.blockPosition());
+        String archived = archivedKnowledge.stream()
+                .filter(id -> !sourceMemory.knownKnowledge().contains(id))
+                .sorted()
+                .findFirst().orElse(null);
         if (archived != null) {
             sourceMemory.learnKnowledge(archived);
         }
 
-        String teachable = sourceMemory.knownKnowledge().stream()
+        var known = sourceMemory.knownKnowledge();
+        String teachable = known.stream()
                 .filter(id -> !KnowledgeBaseline.isBaseline(id))
                 .sorted()
                 .findFirst().orElse(null);
@@ -43,9 +48,16 @@ public final class VillageKnowledgeSharingService {
         teacher.getPersistentData().putLong(NEXT_TEACHING,
                 level.getGameTime() + TEACHING_COOLDOWN);
 
-        // If a real book is available in public storage, write the knowledge into it.
-        // The archive service never conjures books or modifies virtual inventory.
-        VillageKnowledgeArchiveService.archiveOne(level, teacher.blockPosition(), teachable);
+        // Archive one new fact per teaching cycle. This avoids rewriting the same first fact
+        // forever while keeping all storage and item counts physical and player-visible.
+        for (String candidate : known.stream()
+                .filter(id -> !KnowledgeBaseline.isBaseline(id))
+                .filter(id -> !archivedKnowledge.contains(id))
+                .sorted().toList()) {
+            if (VillageKnowledgeArchiveService.archiveOne(level, teacher.blockPosition(), candidate)) {
+                break;
+            }
+        }
 
         var nearby = level.getEntitiesOfClass(Villager.class,
                 teacher.getBoundingBox().inflate(4.0D),
