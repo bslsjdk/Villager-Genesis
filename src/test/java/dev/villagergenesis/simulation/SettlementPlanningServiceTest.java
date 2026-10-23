@@ -31,4 +31,44 @@ class SettlementPlanningServiceTest {
         assertTrue(SettlementPlanningService.processOne(graph,queue,20));
         assertEquals(1,queue.tasks().stream().filter(t->t.status()==SettlementTaskQueue.Status.PENDING).count());
     }
+    @Test void completedSpecializationIsStoredOnTheNode() {
+        var graph=new SettlementNodeGraph(); UUID id=UUID.randomUUID();
+        var node=graph.addNode(id,0,0,70,"minecraft:plains",85,0);
+        node.updateTerrain(70,"minecraft:plains",85,90,30,35);
+        var queue=new SettlementTaskQueue(); queue.enqueueUnique(id,SettlementTaskQueue.Type.PLAN_SETTLEMENT,10);
+        assertTrue(SettlementPlanningService.processOne(graph,queue,20));
+        assertEquals("AGRICULTURE",node.planningRole());
+    }
+
+    @Test void economicGrowthRequiresFoodReserve() {
+        var graph=new SettlementNodeGraph();
+        var node=graph.addNode(UUID.randomUUID(),0,0,70,"minecraft:plains",85,0);
+        node.updateTerrain(70,"minecraft:plains",85,100,50,50);
+        node.setEstimates(4,100,0,0,0);
+        VillageOfflineSimulationService.simulateDataOnly(node,200);
+        assertTrue(node.population() > 4);
+        assertTrue(node.foodReserve() >= 0);
+        assertEquals(SettlementNodeGraph.Kind.VILLAGE,node.kind());
+    }
+
+    @Test void weakFoodCannotCauseUnboundedPopulationGrowth() {
+        var graph=new SettlementNodeGraph();
+        var node=graph.addNode(UUID.randomUUID(),0,0,70,"minecraft:plains",45,0);
+        node.updateTerrain(70,"minecraft:plains",45,0,0,0);
+        node.setEstimates(12,0,0,0,0);
+        for(int i=1;i<=20;i++) VillageOfflineSimulationService.simulateDataOnly(node,i*200L);
+        assertTrue(node.population() <= 12);
+        assertTrue(node.population() >= 4);
+    }
+
+    @Test void specializationImprovesAbstractProductionWithoutWorldMutation() {
+        var graph=new SettlementNodeGraph();
+        var node=graph.addNode(UUID.randomUUID(),0,0,70,"minecraft:forest",85,0);
+        node.updateTerrain(70,"minecraft:forest",85,35,95,35);
+        node.setEstimates(20,100,0,0,0);
+        node.setPlanningRole("FORESTRY");
+        VillageOfflineSimulationService.simulateDataOnly(node,200);
+        assertTrue(node.materials() > 0);
+    }
+
 }
