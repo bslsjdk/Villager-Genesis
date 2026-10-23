@@ -109,7 +109,10 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 
 - Commit fdd4cf0293e27ac986b26bde704bc5d0930c1de8 adds `VillageBootstrapCraftingGoal`: eligible founding roles can process real carried logs into four matching planks, then consume four real planks to craft a crafting table. Outputs are inserted into the villager's real inventory; ingredient consumption precedes output and no items are synthesized.
 - Commit 605fc8c115638f0698078bac36968086a9edab8b registers this goal at priority 7.
-- This is only the first crafting stage. It does not yet place the crafting table, craft/equip tools, or gate farming/mining on tools. A carried crafting table also currently remains in inventory; placement is a required next step.
+- This is still only the first crafting stage. Tool crafting/equipping and tool-aware task gating remain pending.
+- Commit 2533361200db48f53839d193bd92468fd6764a88 adds a physical workbench-placement goal. It consumes a carried crafting-table item only after revalidating an empty, dry, supported position in a loaded chunk; it avoids placing within 12 blocks of an existing crafting table.
+- Commit e55c7c19c04ed552c36e505743416bbfc65ce2f3 registers that placement behavior. This closes the basic log -> planks -> carried crafting table -> placed workbench path in source, pending compilation and in-game validation.
+- Tool crafting and tool-aware task gating are still pending: a workbench can now be placed, but this does not yet mean a villager can craft/equip a hoe, axe, or pickaxe.
 - Vanilla recipe equivalence has been manually encoded for common vanilla log/plank families; this needs compile and gameplay validation. The build has not been confirmed successful.
 
 ## Founding wood bootstrap (source committed; CI/gameplay pending)
