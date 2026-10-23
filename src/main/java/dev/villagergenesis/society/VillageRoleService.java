@@ -1,6 +1,8 @@
 package dev.villagergenesis.society;
 
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.particles.ParticleTypes;
 
 import java.util.List;
 
@@ -49,6 +51,11 @@ public final class VillageRoleService {
         Role assigned = INITIAL_ROLES.get(index);
         data.putString(ROLE_KEY, assigned.id());
         data.putLong(ROLE_ASSIGNED_AT_KEY, villager.level().getGameTime());
+        // A one-time, in-world cue makes the otherwise hidden builder assignment testable.
+        if (assigned == Role.BUILDER && villager.level() instanceof ServerLevel level) {
+            level.sendParticles(ParticleTypes.HAPPY_VILLAGER, villager.getX(),
+                    villager.getY() + 1.0D, villager.getZ(), 4, 0.25D, 0.25D, 0.25D, 0.01D);
+        }
         return assigned;
     }
 
