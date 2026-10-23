@@ -25,9 +25,9 @@ import java.util.EnumSet;
 import java.util.List;
 
 /**
- * Lumberjacks harvest one verified natural-looking trunk block at a time and put real drops into
- * an existing nearby public container. The goal never loads chunks, creates items, or breaks a
- * block unless there is storage capacity for its real drops.
+ * Residents can bootstrap wood supply without a pre-existing chest: real drops go either into an
+ * empty public-container slot or into the villager's own inventory. The goal never loads chunks
+ * or creates items, and it rechecks capacity immediately before breaking the log.
  *
  * This intentionally conservative heuristic requires a vertical trunk and nearby leaves, and
  * rejects locations near block entities, doors, beds, and common construction blocks. It is not a
@@ -61,7 +61,12 @@ public final class VillageLumberjackGoal extends Goal {
         VillageRoleService.Role role = VillageRoleService.ensureRole(villager);
         boolean trainedGatherer = role == VillageRoleService.Role.GATHERER
                 && VillagerMemory.forVillager(villager).knownKnowledge().contains("wood_harvesting");
-        if (role != VillageRoleService.Role.LUMBERJACK && !trainedGatherer) return false;
+        // Founding residents must be able to acquire the first wood before a chest or specialist
+        // exists. Farmers and gatherers may do this bounded starter task; later staffing can
+        // specialize the work without making the initial economy circular.
+        boolean starterResident = role == VillageRoleService.Role.FARMER
+                || role == VillageRoleService.Role.GATHERER;
+        if (role != VillageRoleService.Role.LUMBERJACK && !trainedGatherer && !starterResident) return false;
 
         VisibleStorageScanner.Snapshot snapshot;
         try {
@@ -70,7 +75,8 @@ public final class VillageLumberjackGoal extends Goal {
             return false;
         }
         targetStorage = findStorageWithSpace(level, snapshot);
-        if (targetStorage == null) return false;
+        // No public storage is normal at the founding stage. The villager's real inventory is
+        // the fallback; harvestOneLog checks that the exact computed drop fits before breaking.
         targetLog = findNaturalLookingLog(level, villager.blockPosition());
         if (targetLog == null) {
             targetStorage = null;
@@ -81,7 +87,7 @@ public final class VillageLumberjackGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return !finished && targetLog != null && targetStorage != null
+        return !finished && targetLog != null
                 && travelTicks < MAX_TRAVEL_TICKS && villager.isAlive()
                 && villager.getTarget() == null;
     }
@@ -101,8 +107,7 @@ public final class VillageLumberjackGoal extends Goal {
     @Override
     public void tick() {
         travelTicks++;
-        if (!(villager.level() instanceof ServerLevel level)
-                || targetLog == null || targetStorage == null) {
+        if (!(villager.level() instanceof ServerLevel level) || targetLog == null) {
             finished = true;
             return;
         }
@@ -218,10 +223,14 @@ public final class VillageLumberjackGoal extends Goal {
     }
 
     private void harvestOneLog(ServerLevel level) {
-        if (!level.hasChunkAt(targetLog) || !level.hasChunkAt(targetStorage)
-                || villager.blockPosition().distSqr(targetLog) > 9.0D
-                || !(level.getBlockEntity(targetStorage) instanceof Container container)
-                || targetSlot < 0 || targetSlot >= container.getContainerSize()) return;
+        if (!level.hasChunkAt(targetLog) || villager.blockPosition().distSqr(targetLog) > 9.0D) return;
+        Container container = null;
+        if (targetStorage != null) {
+            if (!level.hasChunkAt(targetStorage)
+                    || !(level.getBlockEntity(targetStorage) instanceof Container found)
+                    || targetSlot < 0 || targetSlot >= found.getContainerSize()) return;
+            container = found;
+        }
         BlockState state = level.getBlockState(targetLog);
         if (!state.is(BlockTags.LOGS) || isProtectedNeighbourhood(level, targetLog)
                 || !hasLeavesNearby(level, targetLog) || !isTrunkSegment(level, targetLog)) return;
@@ -232,31 +241,56 @@ public final class VillageLumberjackGoal extends Goal {
         List<ItemStack> drops = Block.getDrops(state, level, targetLog, blockEntity, villager, tool);
         if (drops.isEmpty() || drops.stream().anyMatch(stack -> !stack.isEmpty() && !isLogItem(stack))) return;
 
-        if (!container.getItem(targetSlot).isEmpty()) return;
+        if (container != null && !container.getItem(targetSlot).isEmpty()) return;
         int nonEmptyDrops = 0;
+        ItemStack realDrop = ItemStack.EMPTY;
         for (ItemStack drop : drops) {
             if (drop.isEmpty()) continue;
             nonEmptyDrops++;
             if (drop.getCount() > drop.getMaxStackSize()) return;
+            realDrop = drop;
         }
         if (nonEmptyDrops != 1) return;
 
-        // Break without world drops, then transfer the exact game-computed drops into storage.
-        // If the block changed between calculation and mutation, no item is granted.
-        if (!level.destroyBlock(targetLog, false, villager)) return;
-        for (ItemStack drop : drops) {
-            if (!drop.isEmpty()) {
-                container.setItem(targetSlot, drop.copy());
-                break;
-            }
+        // Select the destination before mutating the world. The exact vanilla-computed drop must
+        // fit completely in one real slot, either in public storage or the villager inventory.
+        int inventorySlot = -1;
+        if (container == null) {
+            inventorySlot = findInventorySlot(realDrop);
+            if (inventorySlot < 0) return;
         }
-        container.setChanged();
+
+        // Break without world drops, then transfer the exact computed ItemStack. No item is
+        // created unless the block was successfully destroyed and a destination was reserved.
+        if (!level.destroyBlock(targetLog, false, villager)) return;
+        if (container != null) {
+            container.setItem(targetSlot, realDrop.copy());
+            container.setChanged();
+        } else {
+            Container inventory = villager.getInventory();
+            ItemStack existing = inventory.getItem(inventorySlot);
+            if (existing.isEmpty()) inventory.setItem(inventorySlot, realDrop.copy());
+            else existing.grow(realDrop.getCount());
+            inventory.setChanged();
+        }
         VillagerMemory memory = VillagerMemory.forVillager(villager);
         memory.recordActionOutcome("harvest_wood", "success",
                 "Harvested one real trunk block and stored its computed drops.", level.getGameTime());
         memory.learnKnowledge("wood_harvesting");
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, targetLog.getX() + 0.5D,
                 targetLog.getY() + 0.5D, targetLog.getZ() + 0.5D, 5, 0.2D, 0.2D, 0.2D, 0.01D);
+    }
+
+    private int findInventorySlot(ItemStack drop) {
+        Container inventory = villager.getInventory();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack existing = inventory.getItem(slot);
+            if (existing.isEmpty()) return slot;
+            if (ItemStack.isSameItemSameComponents(existing, drop)
+                    && existing.getCount() + drop.getCount() <= Math.min(existing.getMaxStackSize(),
+                    inventory.getMaxStackSize())) return slot;
+        }
+        return -1;
     }
 
     private boolean isLogItem(ItemStack stack) {
