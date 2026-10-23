@@ -123,3 +123,12 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Added animal evidence fields to `SettlementStaffingPolicy.Survey` with a backwards-compatible constructor. Hunter staffing requires both food shortage and surveyed nearby wildlife; herder staffing requires actual penned breedable animals or a documented wool/housing need with nearby animals. This is a planning foundation only.
 - Important unfinished integration: the live group tracker still does not produce resident-scoped bed counts, per-colour wool inventory, plank counts, or animal surveys, and no goal yet crafts/places beds or shears/shepherds sheep. Do not describe these planners as working in-game.
 - For large settlements, next implementation must use per-settlement task reservations and bounded work budgets so hundreds of residents do not all compete for the same bed, sheep, chest slot, or construction order.
+
+
+## Founding-pair workload policy (committed; runtime staffing still not connected)
+
+- Updated `SettlementStaffingPolicy`: a dedicated mayor is not requested below five residents, preserving scarce labor for survival work during the first two-person stage.
+- Completed the role-trimming order so builder and animal roles are also reduced when the combined requested slots exceed population. Added regression tests for two residents and a three-resident high-shortage case.
+- The staffing policy remains a pure planner. It does not yet override the one-time UUID-based initial role assignment, so this change is not evidence that two newly spawned villagers will immediately receive the ideal jobs in-game.
+- Early survival should be opportunistic rather than over-specialized: gatherers may eventually perform safe, bounded resource tasks when there are only one or two residents; dedicated hunter/herder roles should become worthwhile only when population and actual nearby resources can support specialization.
+- Hunting behavior is still pending. A future sheep-harvesting goal must use actual vanilla animal drops, avoid animals clearly inside player-built pens, apply cooldowns and a small local wildlife quota, and never spawn replacement drops or animals.
