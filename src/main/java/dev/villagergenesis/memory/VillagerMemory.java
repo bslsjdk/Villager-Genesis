@@ -39,7 +39,7 @@ public final class VillagerMemory {
 
     private final CompoundTag data;
 
-    private VillagerMemory(CompoundTag data) {
+    VillagerMemory(CompoundTag data) {
         this.data = data;
     }
 
