@@ -94,9 +94,10 @@ public final class SettlementTaskQueue extends SavedData {
     public boolean update(UUID taskId, Status status, int progress, long gameTime) {
         for (Task task : tasks) {
             if (!task.id.equals(taskId)) continue;
+            Status previousStatus = task.status;
             task.status = status;
             task.progress = clamp(progress, 0, 100);
-            if (status == Status.IN_PROGRESS && task.status != Status.IN_PROGRESS) task.attempts++;
+            if (status == Status.IN_PROGRESS && previousStatus != Status.IN_PROGRESS) task.attempts++;
             task.updatedAt = Math.max(task.updatedAt, gameTime);
             setDirty();
             return true;
