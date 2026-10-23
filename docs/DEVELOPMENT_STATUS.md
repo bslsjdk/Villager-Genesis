@@ -138,3 +138,9 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Added separate real-storage categories for planks, beds, and each of the 16 vanilla wool colours in `VisibleStorageScanner`. Mixed-colour wool is not incorrectly combined into a usable bed recipe stock.
 - Added snapshot helpers for largest same-colour wool stock, total planks, and existing beds. These are survey primitives only; the live settlement housing loop still does not consume items, craft/place beds, or reserve stock.
 - CI and in-game status for these latest commits must be checked separately. No in-game validation has been performed.
+
+
+## Founding-role bootstrap update (2026-10-24)
+- New, unassigned adult residents now try a bounded local bootstrap policy before UUID fallback: first observed founder is FARMER, the second complements a FARMER/GATHERER pair, and a third may become BUILDER if no nearby builder exists. It considers only already-loaded nearby villagers and never rewrites a saved role.
+- This mitigates the founding-pair role lottery, but it is not yet a settlement-owned roster allocator. Existing villagers keep old roles; radius-based local grouping may not match eventual settlement boundaries. A role is still not proof that its task can execute, and the lumberjack first-storage deadlock remains unresolved.
+- CI and in-game behavior for this change remain pending until verified.
