@@ -32,21 +32,18 @@ public final class VisibleStorageScanner {
         BREAD, CARROTS, POTATOES, BEETROOT, WHEAT, SEEDS, WOOD, STONE, OTHER
     }
 
-    public record StorageContainer(BlockPos position, String kind, int occupiedSlots, int slots) {
-        public StorageContainer {
-            position = position.immutable();
-        }
-    }
+    public record StorageContainer(int x, int y, int z, String kind, int occupiedSlots, int slots) {}
 
     public record Snapshot(
-            BlockPos center,
+            int centerX,
+            int centerY,
+            int centerZ,
             int radius,
             List<StorageContainer> containers,
             Map<Resource, Integer> itemCounts,
             long scannedAtGameTime
     ) {
         public Snapshot {
-            center = center.immutable();
             containers = List.copyOf(containers);
             EnumMap<Resource, Integer> copy = new EnumMap<>(Resource.class);
             copy.putAll(itemCounts);
@@ -105,11 +102,11 @@ public final class VisibleStorageScanner {
                         Resource resource = classify(stack.getItem());
                         totals.merge(resource, stack.getCount(), Integer::sum);
                     }
-                    found.add(new StorageContainer(cursor.immutable(), kind, occupied, container.getContainerSize()));
+                    found.add(new StorageContainer(x, y, z, kind, occupied, container.getContainerSize()));
                 }
             }
         }
-        return new Snapshot(center, radius, found, totals, level.getGameTime());
+        return new Snapshot(center.getX(), center.getY(), center.getZ(), radius, found, totals, level.getGameTime());
     }
 
     private static Resource classify(Item item) {
