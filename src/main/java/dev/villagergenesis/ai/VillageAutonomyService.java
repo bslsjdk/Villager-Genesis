@@ -33,6 +33,8 @@ public final class VillageAutonomyService {
             villager.goalSelector.addGoal(7, new VillageBootstrapCraftingGoal(villager));
             // Basic tools require real planks/sticks and an actually placed crafting table.
             villager.goalSelector.addGoal(7, new VillageToolCraftingGoal(villager));
+            // Farmers can only create farmland when they actually hold a usable hoe.
+            villager.goalSelector.addGoal(8, new VillageFarmlandPreparationGoal(villager));
             villager.goalSelector.addGoal(7, new VillageWorkbenchPlacementGoal(villager));
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
             // Lumberjacks turn naturally grown trees into real stored building material.
