@@ -21,6 +21,8 @@ public final class VillageRoleService {
         CRAFTER("crafter"),
         MINER("miner"),
         LUMBERJACK("lumberjack"),
+        HUNTER("hunter"),
+        HERDER("herder"),
         MAYOR("mayor"),
         MASON("mason"),
         GUARD("guard"),
@@ -40,7 +42,7 @@ public final class VillageRoleService {
     private static final List<Role> INITIAL_ROLES = List.of(
             Role.FARMER, Role.FARMER, Role.BUILDER, Role.GATHERER,
             Role.GATHERER, Role.CRAFTER, Role.MINER, Role.LUMBERJACK,
-            Role.MASON, Role.MAYOR, Role.GUARD, Role.SCOUT, Role.CARETAKER
+            Role.HUNTER, Role.HERDER, Role.MASON, Role.MAYOR, Role.GUARD, Role.SCOUT, Role.CARETAKER
     );
 
     private VillageRoleService() {}
