@@ -37,6 +37,7 @@ public final class LocalVillagerGroupTracker extends SavedData {
 
     private static final int SCAN_INTERVAL_TICKS = 40;
     private static final int MAX_GROUP_MEMBERS = 32;
+    private static final int MAX_ENTITY_SCAN = 2_048;
     private static final double JOIN_RADIUS_SQR = 24.0D * 24.0D;
     private static final double SPLIT_RADIUS_SQR = 40.0D * 40.0D;
     private static final long FORGET_AFTER_TICKS = 7L * 24_000L;
@@ -88,7 +89,9 @@ public final class LocalVillagerGroupTracker extends SavedData {
         nextScanAt = now + SCAN_INTERVAL_TICKS;
 
         List<Villager> observed = new ArrayList<>();
+        int inspectedEntities = 0;
         for (Entity entity : level.getAllEntities()) {
+            if (++inspectedEntities > MAX_ENTITY_SCAN) break;
             if (entity instanceof Villager villager && villager.isAlive() && !villager.isRemoved()) {
                 observed.add(villager);
                 if (observed.size() >= maxVillagers) break;
@@ -96,12 +99,10 @@ public final class LocalVillagerGroupTracker extends SavedData {
         }
         observed.sort(Comparator.comparing(v -> v.getUUID().toString()));
 
-        Set<UUID> seen = new HashSet<>();
         Map<UUID, List<Villager>> assigned = new HashMap<>();
         int processed = 0;
         for (Villager villager : observed) {
             UUID residentId = villager.getUUID();
-            seen.add(residentId);
             Group group = groupForResident(residentId);
             if (group == null || distanceSqr(group.x, group.z,
                     villager.blockPosition().getX(), villager.blockPosition().getZ()) > SPLIT_RADIUS_SQR
