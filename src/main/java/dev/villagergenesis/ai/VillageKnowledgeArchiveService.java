@@ -47,6 +47,16 @@ public final class VillageKnowledgeArchiveService {
         return found && wrote[0];
     }
 
+    /** Read the knowledge IDs stored in all nearby physical book items in one scan. */
+    public static Set<String> listArchivedKnowledge(ServerLevel level, BlockPos center) {
+        Set<String> all = new LinkedHashSet<>();
+        visitBooks(level, center, DEFAULT_RADIUS, (container, slot, stack) -> {
+            all.addAll(readKnowledge(stack));
+            return false;
+        });
+        return Set.copyOf(all);
+    }
+
     /** Return the first archived knowledge this villager has not learned yet. */
     public static String findUnknownKnowledge(ServerLevel level, BlockPos center, Set<String> alreadyKnown) {
         final String[] found = {null};
