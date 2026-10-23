@@ -140,6 +140,8 @@ public final class SettlementNodeGraph extends SavedData {
 
     private final Map<UUID, Node> nodes = new HashMap<>();
     private final Map<String, Edge> edges = new HashMap<>();
+    // Persisted cursor prevents low-UUID nodes from monopolizing the bounded graph budget.
+    private int edgeCursor = 0;
 
     public static SettlementNodeGraph get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
@@ -167,34 +169,61 @@ public final class SettlementNodeGraph extends SavedData {
         int distance = (int) Math.min(Integer.MAX_VALUE, Math.sqrt((double) dx * dx + (double) dz * dz));
         String key = edgeKey(first, second);
         Edge edge = edges.get(key);
+
+        int complement = Math.abs(a.foodPotential() - b.foodPotential())
+                + Math.abs(a.timberPotential() - b.timberPotential())
+                + Math.abs(a.stonePotential() - b.stonePotential());
+        int trade = Math.min(100, complement / 3);
+        int proximityPressure = distance < 256 ? Math.max(0, 35 - distance / 8) : 0;
+        int tension = edge == null ? proximityPressure
+                : clamp(edge.tension() + (proximityPressure > edge.tension() ? 2
+                : proximityPressure < edge.tension() ? -1 : 0), 0, 100);
+        Relation relation;
+        if (edge != null && (edge.relation() == Relation.WAR || edge.relation() == Relation.ALLIANCE)) {
+            // Preserve deliberate diplomatic states; only a future diplomacy system changes them.
+            relation = edge.relation();
+        } else if (tension >= 55) {
+            relation = Relation.TENSION;
+        } else if (trade >= 35) {
+            relation = Relation.TRADE;
+        } else {
+            relation = tension >= 20 ? Relation.TENSION : Relation.NEUTRAL;
+        }
+
         if (edge == null) {
-            int tension = distance < 256 ? 35 : 0;
-            int complement = Math.abs(a.foodPotential() - b.foodPotential())
-                    + Math.abs(a.timberPotential() - b.timberPotential())
-                    + Math.abs(a.stonePotential() - b.stonePotential());
-            int trade = Math.min(100, complement / 3);
-            Relation relation = distance < 256 ? Relation.TENSION
-                    : trade >= 35 ? Relation.TRADE : Relation.NEUTRAL;
             edge = new Edge(first, second, distance, relation, trade, tension, time);
             edges.put(key, edge);
+            setDirty();
+        } else if (edge.distance() != distance || edge.relation() != relation
+                || edge.tradeScore() != trade || edge.tension() != tension) {
+            edge.distance = distance;
+            edge.update(relation, trade, tension, time);
             setDirty();
         }
         return edge;
     }
 
-    /** Refresh a bounded number of nearest-neighbour edges; graph work is independent of chunks. */
+    /**
+     * Adaptive, bounded nearest-neighbour maintenance. A persistent round-robin cursor spreads
+     * work across the whole graph instead of repeatedly servicing the same UUID-sorted prefix.
+     * The per-call cost is bounded by maxNodes * nodeCount * maxNeighbours and never touches chunks.
+     */
     public int rebuildLocalEdges(int maxNodes, int maxNeighbours, long time) {
+        if (maxNodes <= 0 || maxNeighbours <= 0 || nodes.size() < 2) return 0;
         List<Node> ordered = new ArrayList<>(nodes.values());
         ordered.sort(Comparator.comparing(n -> n.id().toString()));
-        int limit = Math.min(maxNodes, ordered.size());
+        int count = ordered.size();
+        int limit = Math.min(maxNodes, count);
+        int start = Math.floorMod(edgeCursor, count);
         int added = 0;
-        for (int i = 0; i < limit; i++) {
-            Node node = ordered.get(i);
-            List<Node> nearest = new ArrayList<>();
+
+        for (int offset = 0; offset < limit; offset++) {
+            Node node = ordered.get((start + offset) % count);
+            List<Node> nearest = new ArrayList<>(Math.min(maxNeighbours, count - 1));
             for (Node candidate : ordered) {
                 if (candidate == node) continue;
-                int insertAt = 0;
                 long candidateDistance = squaredDistance(node, candidate);
+                int insertAt = 0;
                 while (insertAt < nearest.size()
                         && squaredDistance(node, nearest.get(insertAt)) <= candidateDistance) {
                     insertAt++;
@@ -204,10 +233,16 @@ public final class SettlementNodeGraph extends SavedData {
                 if (nearest.size() > maxNeighbours) nearest.remove(nearest.size() - 1);
             }
             for (Node neighbour : nearest) {
-                Edge before = edges.get(edgeKey(node.id(), neighbour.id()));
+                boolean existed = edges.containsKey(edgeKey(node.id(), neighbour.id()));
                 connect(node.id(), neighbour.id(), time);
-                if (before == null) added++;
+                if (!existed) added++;
             }
+        }
+
+        int nextCursor = (start + limit) % count;
+        if (edgeCursor != nextCursor) {
+            edgeCursor = nextCursor;
+            setDirty();
         }
         return added;
     }
@@ -244,6 +279,7 @@ public final class SettlementNodeGraph extends SavedData {
             n.nextSimulation = Math.max(n.lastSimulated, e.getLong("next"));
             graph.nodes.put(n.id, n);
         }
+        graph.edgeCursor = Math.max(0, tag.getInt("edge_cursor"));
         ListTag edges = tag.getList("edges", Tag.TAG_COMPOUND);
         for (int i = 0; i < edges.size(); i++) {
             CompoundTag e = edges.getCompound(i);
@@ -285,6 +321,7 @@ public final class SettlementNodeGraph extends SavedData {
             e.putInt("tension", edge.tension); e.putLong("updated", edge.lastUpdated);
             edgeList.add(e);
         }
+        tag.putInt("edge_cursor", edgeCursor);
         tag.put("nodes", nodeList);
         tag.put("edges", edgeList);
         return tag;
