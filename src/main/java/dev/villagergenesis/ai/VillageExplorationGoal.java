@@ -11,6 +11,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.EnumSet;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Low-priority, interruption-safe exploration behavior. Vanilla panic, sleep, work, trading,
@@ -22,6 +26,9 @@ public final class VillageExplorationGoal extends Goal {
     private static final int COOLDOWN_TICKS = 1_200;
     private static final int MAX_TRAVEL_TICKS = 240;
     private static final String NEXT_CHECK = "villager_genesis_next_exploration_check";
+    private static final int REGION_SCAN_INTERVAL = 100;
+    private static final Map<ServerLevel, Map<Long, Long>> NEXT_REGION_SCAN =
+            Collections.synchronizedMap(new WeakHashMap<>());
     private final Villager villager;
     private BlockPos destination;
     private int travelTicks;
@@ -41,7 +48,23 @@ public final class VillageExplorationGoal extends Goal {
         long now = level.getGameTime();
         var data = villager.getPersistentData();
         if (now < data.getLong(NEXT_EXPLORATION) || now < data.getLong(NEXT_CHECK)) return false;
-        data.putLong(NEXT_CHECK, now + 100L);
+        data.putLong(NEXT_CHECK, now + REGION_SCAN_INTERVAL);
+        long regionKey = (((long) (villager.blockPosition().getX() >> 5)) << 32)
+                ^ ((villager.blockPosition().getZ() >> 5) & 0xffffffffL);
+        synchronized (NEXT_REGION_SCAN) {
+            Map<Long, Long> regions = NEXT_REGION_SCAN.computeIfAbsent(level,
+                    ignored -> new HashMap<>());
+            if (now < regions.getOrDefault(regionKey, 0L)) return false;
+            regions.put(regionKey, now + REGION_SCAN_INTERVAL);
+            // Bound bookkeeping when villagers explore many different regions over long sessions.
+            if (regions.size() > 256) {
+                regions.entrySet().removeIf(entry -> entry.getValue() <= now);
+                while (regions.size() > 256) {
+                    Long oldestKey = regions.keySet().iterator().next();
+                    regions.remove(oldestKey);
+                }
+            }
+        }
         destination = findSafeDestination(level);
         return destination != null;
     }
