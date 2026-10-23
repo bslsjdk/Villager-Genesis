@@ -15,7 +15,7 @@ public final class KnowledgeRegistry {
         register(new KnowledgeDefinition(
                 "safe_shelter", "Safe shelter",
                 "Recognize a defensible place to rest and seek protection before nightfall.",
-                Set.of(), 100, 8));
+                Set.of(), 98, 8));
         register(new KnowledgeDefinition(
                 "hostile_awareness", "Hostile awareness",
                 "Recognize nearby hostile threats and identify safer routes or places to retreat.",
