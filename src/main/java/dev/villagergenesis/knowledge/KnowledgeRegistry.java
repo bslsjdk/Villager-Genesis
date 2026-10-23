@@ -71,8 +71,23 @@ public final class KnowledgeRegistry {
             if (prerequisite.equals(definition.id())) {
                 throw new IllegalArgumentException("Knowledge cannot depend on itself: " + prerequisite);
             }
+            if (hasPath(prerequisite, definition.id(), new java.util.HashSet<>())) {
+                throw new IllegalArgumentException("Knowledge prerequisite cycle involving: "
+                        + definition.id() + " and " + prerequisite);
+            }
         }
         definitions.put(definition.id(), definition);
+    }
+
+    private boolean hasPath(String current, String target, Set<String> visited) {
+        if (current.equals(target)) return true;
+        if (!visited.add(current)) return false;
+        KnowledgeDefinition known = definitions.get(current);
+        if (known == null) return false;
+        for (String prerequisite : known.prerequisites()) {
+            if (hasPath(prerequisite, target, visited)) return true;
+        }
+        return false;
     }
 
     public Optional<KnowledgeDefinition> find(String id) {
