@@ -93,7 +93,7 @@ public final class VillageOfflineSimulationService {
         // terrain API (including getBiome). Store only explicitly estimated metadata.
         if (!level.hasChunkAt(samplePos)) {
             String biome = "unobserved";
-            int estimatedY = level.getSeaLevel();
+            int estimatedY = samplePos.getY();
             int terrainScore = 45;
             int food = 40;
             int timber = 35;
