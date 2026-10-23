@@ -122,10 +122,10 @@ public final class VisibleStorageScanner {
                 || item == Items.MELON_SEEDS || item == Items.PUMPKIN_SEEDS) return Resource.SEEDS;
         if (item == Items.OAK_LOG || item == Items.SPRUCE_LOG || item == Items.BIRCH_LOG
                 || item == Items.JUNGLE_LOG || item == Items.ACACIA_LOG || item == Items.DARK_OAK_LOG
-                || item == Items.MANGROVE_LOG || item == Items.CHERRY_LOG || item == Items.PALE_OAK_LOG
+                || item == Items.MANGROVE_LOG || item == Items.CHERRY_LOG
                 || item == Items.OAK_PLANKS || item == Items.SPRUCE_PLANKS || item == Items.BIRCH_PLANKS
                 || item == Items.JUNGLE_PLANKS || item == Items.ACACIA_PLANKS || item == Items.DARK_OAK_PLANKS
-                || item == Items.MANGROVE_PLANKS || item == Items.CHERRY_PLANKS || item == Items.PALE_OAK_PLANKS) {
+                || item == Items.MANGROVE_PLANKS || item == Items.CHERRY_PLANKS) {
             return Resource.WOOD;
         }
         if (item == Items.COBBLESTONE || item == Items.STONE || item == Items.ANDESITE
