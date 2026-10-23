@@ -183,3 +183,10 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - The goal tracks the coordinates of crops it personally planted in that villager's persistent data and harvests only those tracked crops. This intentionally avoids harvesting arbitrary player-grown crops. Each villager's tracked plot is capped at 24 crops; scans are bounded to nearby loaded terrain and throttled.
 - This does not create seeds, water, farmland, or crops for free. It also does not yet route harvested food into a shared settlement store or prove that crops reliably reach maturity under all world conditions. Tool wear, crop growth, reload persistence, and two-villager contention still need clean-world testing.
 
+## Seed bootstrap and physical crop work (2026-10-24)
+
+- Added `VillageSeedGatheringGoal` for FARMER/GATHERER residents with no supported planting stock. It harvests nearby short/tall grass through the vanilla loot table, transfers only the computed drops into the real inventory, and may legitimately receive no seeds. It does not fabricate seeds.
+- Seed gathering avoids nearby block entities, beds, doors, storage, workstations, paths, and existing crops. It only examines loaded terrain, has travel/scan cooldowns, and will not keep harvesting grass once supported planting stock exists.
+- `VillageCropWorkGoal` now navigates to the local crop plot before planting/harvesting instead of performing remote actions. It harvests only tracked crops personally planted by that villager, and will not expand the plot while ripe tracked crops cannot fit in inventory.
+- The starter farming loop is now represented in code as: obtain a real hoe -> till nearby dirt/grass beside water -> gather real seed drops if needed -> plant real seeds -> wait for vanilla growth -> harvest the villager's own tracked mature crops. CI and in-game behavior must still be verified; harvested food is not yet automatically transferred to a shared settlement store.
+
