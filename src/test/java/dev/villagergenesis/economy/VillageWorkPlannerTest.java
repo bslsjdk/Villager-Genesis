@@ -32,6 +32,14 @@ class VillageWorkPlannerTest {
     }
 
     @Test
+    void integratedPlannerAddsStorageExpansionWhenCapacityIsMissing() {
+        var farm = new VillageWorkPlanner.FarmSurvey(8, 4, 0, 4, 2, 4, 6);
+        var proposals = VillageWorkPlanner.plan(storage(20, 4), farm, 10, 3,
+                16, 2, 20);
+        assertTrue(proposals.stream().anyMatch(p -> p.work() == VillageWorkPlanner.Work.EXPAND_STORAGE));
+    }
+
+    @Test
     void lowSeedReserveGetsProtected() {
         var farm = new VillageWorkPlanner.FarmSurvey(8, 4, 0, 4, 0, 1, 10);
         var proposals = VillageWorkPlanner.plan(storage(40, 0), farm, 10, 3);
