@@ -15,14 +15,14 @@ class KnowledgeLearningPlannerTest {
         var recommendations = KnowledgeLearningPlanner.recommendLearning(registry, Set.of(), 100, 3);
 
         assertEquals("hostile_awareness", recommendations.get(0).id());
-        assertEquals("safe_shelter", recommendations.get(1).id());
+        assertEquals("basic_shelter", recommendations.get(1).id());
         assertFalse(recommendations.stream().anyMatch(d -> d.id().equals("perimeter_patrol")));
     }
 
     @Test
     void advancedKnowledgeWaitsForPrerequisites() {
         var recommendations = KnowledgeLearningPlanner.recommendLearning(
-                registry, Set.of("safe_shelter", "hostile_awareness"), 100, 10);
+                registry, Set.of("basic_shelter", "basic_tools", "basic_crafting", "basic_food_production", "basic_equipment", "village_cooperation", "hostile_awareness"), 100, 10);
         var ids = recommendations.stream().map(KnowledgeDefinition::id).collect(Collectors.toSet());
 
         assertTrue(ids.contains("basic_defense"));
@@ -35,8 +35,8 @@ class KnowledgeLearningPlannerTest {
     void studentsCanLearnFromTeachersOnlyAfterPrerequisites() {
         var lessons = KnowledgeLearningPlanner.recommendTeaching(
                 registry,
-                Set.of("safe_shelter", "hostile_awareness", "basic_defense"),
-                Set.of("safe_shelter", "hostile_awareness"),
+                Set.of("basic_shelter", "basic_tools", "basic_crafting", "basic_food_production", "basic_equipment", "village_cooperation", "hostile_awareness", "basic_defense"),
+                Set.of("basic_shelter", "basic_tools", "basic_crafting", "basic_food_production", "basic_equipment", "village_cooperation", "hostile_awareness"),
                 10);
 
         assertTrue(lessons.stream().anyMatch(d -> d.id().equals("basic_defense")));
