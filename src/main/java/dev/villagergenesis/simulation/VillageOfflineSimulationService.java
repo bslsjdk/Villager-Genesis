@@ -27,6 +27,7 @@ public final class VillageOfflineSimulationService {
     private static final int GRAPH_NEIGHBOURS = 3;
     private static final Map<ServerLevel, Long> NEXT_LEVEL_STEP = new WeakHashMap<>();
     private static final Map<ServerLevel, Integer> ROUND_ROBIN = new WeakHashMap<>();
+    private static final Map<ServerLevel, Integer> TERRAIN_REFRESH_CURSOR = new WeakHashMap<>();
 
     private VillageOfflineSimulationService() {}
 
@@ -44,6 +45,7 @@ public final class VillageOfflineSimulationService {
         SettlementNodeGraph graph = SettlementNodeGraph.get(level);
         SettlementTaskQueue queue = SettlementTaskQueue.get(level);
         seedOneCandidate(level, graph, now);
+        refreshOneLoadedEstimate(level, graph);
         if (!graph.nodes().isEmpty()) {
             int nodeCount = graph.nodes().size();
             // Spend more on graph quality while small; taper work as the graph grows.
@@ -53,6 +55,44 @@ public final class VillageOfflineSimulationService {
         }
         // Process at most one persistent abstract plan per scheduler step. This is data-only.
         SettlementPlanningService.processOne(graph, queue, now);
+    }
+
+
+    /**
+     * Upgrade one previously estimated node when its chunk is already loaded for other reasons.
+     * The single hasChunkAt gate dominates every terrain API in this refresh path.
+     */
+    private static void refreshOneLoadedEstimate(ServerLevel level, SettlementNodeGraph graph) {
+        List<SettlementNodeGraph.Node> nodes = graph.nodes();
+        if (nodes.isEmpty()) return;
+        SettlementNodeGraph.Node candidate = null;
+        synchronized (TERRAIN_REFRESH_CURSOR) {
+            int start = Math.floorMod(TERRAIN_REFRESH_CURSOR.getOrDefault(level, 0), nodes.size());
+            for (int offset = 0; offset < nodes.size(); offset++) {
+                SettlementNodeGraph.Node node = nodes.get((start + offset) % nodes.size());
+                String biome = node.biomeId();
+                if ("unobserved".equals(biome) || "unknown".equals(biome)) {
+                    candidate = node;
+                    TERRAIN_REFRESH_CURSOR.put(level, (start + offset + 1) % nodes.size());
+                    break;
+                }
+            }
+        }
+        if (candidate == null) return;
+
+        BlockPos samplePos = new BlockPos(candidate.x(), 0, candidate.z());
+        if (!level.hasChunkAt(samplePos)) return;
+
+        // Do not move either query above the loaded-chunk gate.
+        String biome = level.getBiome(samplePos).unwrapKey()
+                .map(holder -> holder.location().toString()).orElse("unknown");
+        int estimatedY = level.getHeight(Heightmap.Types.WORLD_SURFACE, candidate.x(), candidate.z());
+        int terrainScore = scoreBiome(biome);
+        int food = biome.contains("plains") || biome.contains("meadow") || biome.contains("river") ? 75 : 40;
+        int timber = biome.contains("forest") || biome.contains("taiga") || biome.contains("grove") ? 80 : 35;
+        int stone = biome.contains("mountain") || biome.contains("windswept") || biome.contains("stony") ? 80 : 45;
+        candidate.updateTerrain(estimatedY, biome, terrainScore, food, timber, stone);
+        graph.markChanged();
     }
 
     /**
