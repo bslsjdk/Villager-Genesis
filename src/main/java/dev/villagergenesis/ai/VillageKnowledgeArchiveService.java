@@ -52,8 +52,14 @@ public final class VillageKnowledgeArchiveService {
 
     /** Read the knowledge IDs stored in all nearby physical book items in one scan. */
     public static Set<String> listArchivedKnowledge(ServerLevel level, BlockPos center) {
+        return listArchivedKnowledge(level, center, DEFAULT_RADIUS);
+    }
+
+    /** Read a wider physical-book search area for librarians; never loads new chunks. */
+    public static Set<String> listArchivedKnowledge(ServerLevel level, BlockPos center, int radius) {
         Set<String> all = new LinkedHashSet<>();
-        visitBooks(level, center, DEFAULT_RADIUS, (container, slot, stack) -> {
+        int boundedRadius = Math.max(DEFAULT_RADIUS, Math.min(16, radius));
+        visitBooks(level, center, boundedRadius, (container, slot, stack) -> {
             all.addAll(readKnowledge(stack));
             return false;
         });
