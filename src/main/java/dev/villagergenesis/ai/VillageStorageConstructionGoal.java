@@ -43,7 +43,7 @@ public final class VillageStorageConstructionGoal extends Goal {
 
     public VillageStorageConstructionGoal(Villager villager) {
         this.villager = villager;
-        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
@@ -171,6 +171,8 @@ public final class VillageStorageConstructionGoal extends Goal {
                             || !level.getFluidState(pos.above()).isEmpty()) continue;
                     if (!level.getEntities(villager, new AABB(pos).inflate(0.25D),
                             entity -> entity.isAlive()).isEmpty()) continue;
+                    if (!level.hasChunkAt(pos.north()) || !level.hasChunkAt(pos.south())
+                            || !level.hasChunkAt(pos.east()) || !level.hasChunkAt(pos.west())) continue;
                     if (level.getBlockState(pos.north()).is(Blocks.CHEST)
                             || level.getBlockState(pos.south()).is(Blocks.CHEST)
                             || level.getBlockState(pos.east()).is(Blocks.CHEST)
