@@ -113,3 +113,13 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Hunting must be conservative and outcome-driven, avoid exhausting nearby wildlife, and use real drops/inventory. Do not add hostile-mob combat behavior as a shortcut for hunting.
 - Husbandry must not break player builds, place fences without real materials, teleport animals, or load chunks. Pen safety and ownership detection need explicit checks; uncertain player-built enclosures must be left alone.
 - Role assignment is currently UUID-based and not settlement-scoped, so the next step must connect these roles to local group staffing without assigning every nearby villager the same job.
+
+
+## Population-scaled housing materials (planner committed; runtime integration pending)
+
+- Added `SettlementHousingPlanner`, a pure planner that calculates bed shortage from surveyed residents and usable beds, then caps the number of beds craftable in one planning pass.
+- Bed crafting uses the vanilla material rule: three planks and three compatible same-colour wool items per bed. The planner deliberately accepts `compatibleWoolItems` rather than total wool across all colours; a real survey must group wool by colour before passing the largest usable matching group.
+- The planner never creates materials, places beds, or loads chunks. Unit tests cover shortages, mixed-colour wool input, population caps, and invalid counts.
+- Added animal evidence fields to `SettlementStaffingPolicy.Survey` with a backwards-compatible constructor. Hunter staffing requires both food shortage and surveyed nearby wildlife; herder staffing requires actual penned breedable animals or a documented wool/housing need with nearby animals. This is a planning foundation only.
+- Important unfinished integration: the live group tracker still does not produce resident-scoped bed counts, per-colour wool inventory, plank counts, or animal surveys, and no goal yet crafts/places beds or shears/shepherds sheep. Do not describe these planners as working in-game.
+- For large settlements, next implementation must use per-settlement task reservations and bounded work budgets so hundreds of residents do not all compete for the same bed, sheep, chest slot, or construction order.
