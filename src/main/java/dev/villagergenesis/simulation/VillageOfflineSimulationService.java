@@ -188,6 +188,9 @@ public final class VillageOfflineSimulationService {
                     || node.state() == SettlementNodeGraph.State.SETTLING) {
                 node.setState(SettlementNodeGraph.State.WAKE_QUEUED);
                 graph.markChanged();
+                // Wake-up only queues a data-only planning task; it does not start construction.
+                SettlementTaskQueue.get(level).enqueueUnique(
+                        node.id(), SettlementTaskQueue.Type.PLAN_SETTLEMENT, now);
             }
             return;
         }
