@@ -85,7 +85,8 @@ public final class VillageOfflineSimulationService {
         }
         String dimension = level.dimension().location().toString();
         String key = level.getSeed() + "|" + dimension + "|" + x + "|" + z;
-        BlockPos samplePos = new BlockPos(x, level.getSeaLevel(), z);
+        // hasChunkAt depends on the chunk coordinates; use a neutral Y so no terrain-height query is needed.
+        BlockPos samplePos = new BlockPos(x, 0, z);
         UUID id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
         if (graph.node(id) != null) return;
 
@@ -93,7 +94,7 @@ public final class VillageOfflineSimulationService {
         // terrain API (including getBiome). Store only explicitly estimated metadata.
         if (!level.hasChunkAt(samplePos)) {
             String biome = "unobserved";
-            int estimatedY = samplePos.getY();
+            int estimatedY = 63; // conservative overworld-style baseline; explicitly an estimate
             int terrainScore = 45;
             int food = 40;
             int timber = 35;
