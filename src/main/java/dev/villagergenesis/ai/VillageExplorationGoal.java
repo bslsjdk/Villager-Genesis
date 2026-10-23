@@ -21,6 +21,7 @@ public final class VillageExplorationGoal extends Goal {
     private static final String NEXT_EXPLORATION = "villager_genesis_next_exploration";
     private static final int COOLDOWN_TICKS = 1_200;
     private static final int MAX_TRAVEL_TICKS = 240;
+    private static final String NEXT_CHECK = "villager_genesis_next_exploration_check";
     private final Villager villager;
     private BlockPos destination;
     private int travelTicks;
@@ -37,9 +38,10 @@ public final class VillageExplorationGoal extends Goal {
                 || !villager.getNavigation().isDone()) {
             return false;
         }
-        if (level.getGameTime() < villager.getPersistentData().getLong(NEXT_EXPLORATION)) {
-            return false;
-        }
+        long now = level.getGameTime();
+        var data = villager.getPersistentData();
+        if (now < data.getLong(NEXT_EXPLORATION) || now < data.getLong(NEXT_CHECK)) return false;
+        data.putLong(NEXT_CHECK, now + 100L);
         destination = findSafeDestination(level);
         return destination != null;
     }
@@ -107,7 +109,7 @@ public final class VillageExplorationGoal extends Goal {
                 }
                 if (level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, feet) < 7) continue;
                 if (!level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
-                        villager.getBoundingBox().inflate(6.0D),
+                        new net.minecraft.world.phys.AABB(feet).inflate(6.0D),
                         mob -> mob.getType().getCategory()
                                 == net.minecraft.world.entity.MobCategory.MONSTER).isEmpty()) {
                     continue;
