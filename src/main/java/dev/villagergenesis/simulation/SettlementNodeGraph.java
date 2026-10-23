@@ -190,12 +190,22 @@ public final class SettlementNodeGraph extends SavedData {
         int added = 0;
         for (int i = 0; i < limit; i++) {
             Node node = ordered.get(i);
-            List<Node> nearest = new ArrayList<>(ordered);
-            nearest.remove(node);
-            nearest.sort(Comparator.comparingLong(other -> squaredDistance(node, other)));
-            for (int j = 0; j < Math.min(maxNeighbours, nearest.size()); j++) {
-                Edge before = edges.get(edgeKey(node.id(), nearest.get(j).id()));
-                connect(node.id(), nearest.get(j).id(), time);
+            List<Node> nearest = new ArrayList<>();
+            for (Node candidate : ordered) {
+                if (candidate == node) continue;
+                int insertAt = 0;
+                long candidateDistance = squaredDistance(node, candidate);
+                while (insertAt < nearest.size()
+                        && squaredDistance(node, nearest.get(insertAt)) <= candidateDistance) {
+                    insertAt++;
+                }
+                if (insertAt >= maxNeighbours) continue;
+                nearest.add(insertAt, candidate);
+                if (nearest.size() > maxNeighbours) nearest.remove(nearest.size() - 1);
+            }
+            for (Node neighbour : nearest) {
+                Edge before = edges.get(edgeKey(node.id(), neighbour.id()));
+                connect(node.id(), neighbour.id(), time);
                 if (before == null) added++;
             }
         }
