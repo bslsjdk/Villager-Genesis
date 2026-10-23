@@ -53,6 +53,10 @@ public final class VillageShelterConstructionGoal extends Goal {
                 || level.getGameTime() < villager.getPersistentData().getLong("villager_genesis_next_shelter")) {
             return false;
         }
+        // One settlement should not spend 33 planks per builder on duplicate huts.
+        // The registry is persistent, so this still works after saving and restarting the world.
+        if (hasNearbyRegisteredShelter(level, villager.blockPosition())) return false;
+
         VisibleStorageScanner.Snapshot snapshot;
         try {
             snapshot = VisibleStorageScanner.scan(level, villager.blockPosition(), 8);
@@ -222,8 +226,27 @@ public final class VillageShelterConstructionGoal extends Goal {
         level.playSound(null, site, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 0.8F, 0.9F);
         villager.getPersistentData().putInt("villager_genesis_shelters_built",
                 villager.getPersistentData().getInt("villager_genesis_shelters_built") + 1);
+        VillageStructureRegistry registry = VillageStructureRegistry.get(level);
+        for (BlockPos pos : placed) {
+            registry.registerPlacedBlock(pos, "shelter_oak", villager.getUUID(), level.getGameTime());
+        }
         VillagerMemory.forVillager(villager).recordActionOutcome("build_shelter", "success",
                 "Built a 3x3 oak shelter from 33 real planks taken from village storage.", level.getGameTime());
         VillagerMemory.forVillager(villager).learnKnowledge("shelter_construction");
+    }
+
+    private boolean hasNearbyRegisteredShelter(ServerLevel level, BlockPos origin) {
+        long maxDistance = 24L * 24L;
+        for (VillageStructureRegistry.OwnedBlock block
+                : VillageStructureRegistry.get(level).blocksOfType("shelter_oak")) {
+            if (block.pos().distSqr(origin) <= maxDistance) {
+                // Ignore stale records if a player has already removed the registered block.
+                if (level.hasChunkAt(block.pos())
+                        && level.getBlockState(block.pos()).is(Blocks.OAK_PLANKS)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
