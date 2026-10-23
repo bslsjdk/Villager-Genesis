@@ -6,6 +6,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.Villager;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Server-side adapter between live Minecraft villagers and the civilization simulation.
  * A stable UUID-based phase spreads observations across ticks instead of synchronizing every
@@ -44,8 +47,26 @@ public final class VillagerMemoryService {
         // from the executor-owned active-goal key, and always re-evaluate on scheduled observations
         // so an old "explore" goal cannot suppress an urgent retreat recommendation.
         String activeGoal = villager.getPersistentData().getString("villager_genesis_current_goal");
-        GoalPlanner.rankGoals(memory.snapshot(activeGoal), context).stream().findFirst().ifPresent(candidate ->
-                memory.recordSuggestion(candidate.goal(), candidate.score(), candidate.reason(), gameTime));
+        GoalPlanner.rankGoals(memory.snapshot(activeGoal), context, outcomeFeedback(memory)).stream()
+                .findFirst().ifPresent(candidate ->
+                        memory.recordSuggestion(candidate.goal(), candidate.score(), candidate.reason(), gameTime));
         VillageKnowledgeSharingService.tryTeachOne(villager);
+    }
+
+    private static List<GoalPlanner.Feedback> outcomeFeedback(VillagerMemory memory) {
+        List<GoalPlanner.Feedback> feedback = new ArrayList<>();
+        String[] goals = {
+                "retreat", "seek_food", "seek_shelter", "learn",
+                "cooperate", "explore", "observe", "initialize"
+        };
+        for (String goal : goals) {
+            String lastResult = goal.equals(memory.lastActionGoal()) ? memory.lastActionResult() : "";
+            feedback.add(new GoalPlanner.Feedback(goal,
+                    memory.actionSuccessesFor(goal),
+                    memory.actionFailuresFor(goal),
+                    memory.actionInterruptsFor(goal),
+                    lastResult));
+        }
+        return List.copyOf(feedback);
     }
 }
