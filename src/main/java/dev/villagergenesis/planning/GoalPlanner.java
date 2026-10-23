@@ -52,12 +52,14 @@ public final class GoalPlanner {
      * villager cannot let old history overwhelm urgent survival needs.
      */
     public record Feedback(
+            String goal,
             int successes,
             int failures,
             int interruptions,
             String lastResult
     ) {
         public Feedback {
+            goal = goal == null ? "" : goal;
             successes = clamp(successes, 0, 4);
             failures = clamp(failures, 0, 4);
             interruptions = clamp(interruptions, 0, 4);
@@ -68,7 +70,7 @@ public final class GoalPlanner {
         }
 
         public static Feedback none() {
-            return new Feedback(0, 0, 0, "");
+            return new Feedback("", 0, 0, 0, "");
         }
 
         private int scoreAdjustment() {
@@ -92,14 +94,14 @@ public final class GoalPlanner {
 
     /** Returns candidates in deterministic score order, including concise reasons for debugging. */
     public static List<Candidate> rankGoals(VillagerMemory.Snapshot memory, Context context) {
-        return rankGoals(memory, context, Feedback.none());
+        return rankGoals(memory, context, List.of());
     }
 
     public static List<Candidate> rankGoals(
-            VillagerMemory.Snapshot memory, Context context, Feedback feedback) {
+            VillagerMemory.Snapshot memory, Context context, List<Feedback> feedback) {
         if (memory == null) return List.of();
         Context facts = context == null ? Context.memoryOnly() : context;
-        Feedback outcomes = feedback == null ? Feedback.none() : feedback;
+        List<Feedback> outcomes = feedback == null ? List.of() : feedback;
         List<Candidate> candidates = new ArrayList<>();
 
         if (facts.threatLevel() >= URGENT_THREAT || facts.healthPercent() <= CRITICAL_HEALTH) {
@@ -155,7 +157,9 @@ public final class GoalPlanner {
         for (int i = 0; i < candidates.size(); i++) {
             Candidate candidate = candidates.get(i);
             if (!isUrgent(candidate.goal())) {
-                int adjustment = outcomes.scoreAdjustment();
+                int adjustment = outcomes.stream()
+                        .filter(outcome -> candidate.goal().equals(outcome.goal()))
+                        .findFirst().map(Feedback::scoreAdjustment).orElse(0);
                 if (adjustment != 0) {
                     candidates.set(i, new Candidate(candidate.goal(), candidate.score() + adjustment,
                             candidate.reason() + " Bounded outcome feedback adjusted this candidate."));
