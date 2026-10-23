@@ -31,4 +31,21 @@ class VillageEconomyTest {
         economy.setStock(VillageEconomy.Resource.BREAD, 20);
         assertEquals(2, economy.fieldsNeededForTargetReserve(10));
     }
+    @Test
+    void prioritizesToolSupplyWhenWoodIsLowAndNoAxesAreStocked() {
+        VillageEconomy economy = new VillageEconomy(4, 8, 4, 0, 8, 0, 3);
+        economy.setStock(VillageEconomy.Resource.WOOD, 2);
+        assertEquals(VillageEconomy.Action.CRAFT_TOOLS, economy.nextAction());
+    }
+
+    @Test
+    void prioritizesMiningWhenMetalReserveIsLowAfterToolAndFoodNeeds() {
+        VillageEconomy economy = new VillageEconomy(4, 8, 4, 0, 8, 0, 3);
+        economy.setStock(VillageEconomy.Resource.AXES, 2);
+        economy.setStock(VillageEconomy.Resource.PICKAXES, 2);
+        economy.setStock(VillageEconomy.Resource.WOOD, 20);
+        economy.setStock(VillageEconomy.Resource.STONE, 20);
+        assertEquals(VillageEconomy.Action.MINE_ORE, economy.nextAction());
+    }
+
 }
