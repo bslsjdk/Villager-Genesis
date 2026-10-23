@@ -105,6 +105,7 @@ public final class VillageResidentFleeGoal extends Goal {
                     || villager.distanceToSqr(threat) >= ESCAPE_DISTANCE_SQR))) {
                 memory.recordActionOutcome("flee_threat", "success",
                         "Reached a safer distance from a nearby hostile mob.", level.getGameTime());
+                memory.learnKnowledge("hostile_awareness");
             } else {
                 memory.recordActionOutcome("flee_threat", "interrupted",
                         "Escape ended before a safe distance was confirmed.", level.getGameTime());
