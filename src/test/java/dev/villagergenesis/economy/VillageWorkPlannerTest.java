@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class VillageWorkPlannerTest {
     private VisibleStorageScanner.Snapshot storage(int bread, int seeds) {
         return new VisibleStorageScanner.Snapshot(
-                new net.minecraft.core.BlockPos(0, 64, 0), 12, List.of(),
+                0, 64, 0, 12, List.of(),
                 Map.of(VisibleStorageScanner.Resource.BREAD, bread,
                         VisibleStorageScanner.Resource.SEEDS, seeds), 0L);
     }
