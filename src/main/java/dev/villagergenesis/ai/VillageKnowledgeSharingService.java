@@ -1,6 +1,8 @@
 package dev.villagergenesis.ai;
 
 import dev.villagergenesis.knowledge.KnowledgeBaseline;
+import dev.villagergenesis.knowledge.KnowledgeLearningPlanner;
+import dev.villagergenesis.knowledge.KnowledgeRegistry;
 import dev.villagergenesis.memory.VillagerMemory;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.npc.Villager;
@@ -55,17 +57,36 @@ public final class VillageKnowledgeSharingService {
         }
 
         var known = sourceMemory.knownKnowledge();
-        String teachable = known.stream()
-                .filter(id -> !KnowledgeBaseline.isBaseline(id))
-                .sorted()
-                .findFirst().orElse(null);
-        if (teachable == null) return;
+        // Every villager can teach what they know. A librarian is not the only teacher;
+        // physical books are the librarian's additional source of knowledge.
+        var nearby = level.getEntitiesOfClass(Villager.class,
+                teacher.getBoundingBox().inflate(4.0D),
+                other -> other != teacher && other.isAlive() && !other.isBaby()
+                        && other.getTarget() == null
+                        && level.getGameTime() >= other.getPersistentData().getLong(NEXT_TEACHING))
+                .stream()
+                .sorted(Comparator.comparingDouble(teacher::distanceToSqr))
+                .toList();
+
+        KnowledgeRegistry registry = new KnowledgeRegistry();
+        Villager student = null;
+        String teachable = null;
+        for (Villager candidate : nearby) {
+            var studentMemory = VillagerMemory.forVillager(candidate);
+            var lessons = KnowledgeLearningPlanner.recommendTeaching(
+                    registry, known, studentMemory.knownKnowledge(), 1);
+            if (!lessons.isEmpty()) {
+                student = candidate;
+                teachable = lessons.get(0).id();
+                break;
+            }
+        }
+        if (student == null || teachable == null) return;
 
         teacher.getPersistentData().putLong(NEXT_TEACHING,
                 level.getGameTime() + TEACHING_COOLDOWN);
 
-        // Archive one new fact per teaching cycle. This avoids rewriting the same first fact
-        // forever while keeping all storage and item counts physical and player-visible.
+        // Archive knowledge in physical books when available; teaching also works without books.
         String archiveCandidate = known.stream()
                 .filter(id -> !KnowledgeBaseline.isBaseline(id))
                 .filter(id -> !archivedKnowledge.contains(id))
@@ -73,16 +94,6 @@ public final class VillageKnowledgeSharingService {
         if (archiveCandidate != null) {
             VillageKnowledgeArchiveService.archiveOne(level, teacher.blockPosition(), archiveCandidate);
         }
-
-        var nearby = level.getEntitiesOfClass(Villager.class,
-                teacher.getBoundingBox().inflate(4.0D),
-                other -> other != teacher && other.isAlive() && !other.isBaby()
-                        && other.getTarget() == null
-                        && !VillagerMemory.forVillager(other).knownKnowledge().contains(teachable));
-        Villager student = nearby.stream()
-                .min(Comparator.comparingDouble(teacher::distanceToSqr))
-                .orElse(null);
-        if (student == null) return;
 
         VillagerMemory.forVillager(student).learnKnowledge(teachable);
         student.getPersistentData().putLong(NEXT_TEACHING,
