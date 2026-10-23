@@ -40,7 +40,8 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Commit 376fdea7b04a9e7c1acb4b2f763471b5ad32ad9c: added VillageResidentFleeGoal.
 - Commit 4ff7c281beb599661946c217869729c86f8b1cd6: installed resident escape behavior in VillageAutonomyService.
 - Commit 9b459216e980f3eb0a8a9ec71c502ee78e57c79a: records hostile-awareness knowledge only after a successful escape.
-- The latest branch build for the resident escape integration was still running at last check (Build run #290 / 40005782672); a PR-triggered build was also running. Re-check Actions before treating the new goal as CI-passed.
+- Commit f7644a1d2a38a1f023f0bf64890132b49dfc3e42: Build run #294 / 40005844030 passed, including Build and test and JAR upload.
+- Follow-up correctness fix afdca3579f2acb8d7c4389c0e2510e4211806e67: a threat disappearing no longer counts as a successful escape or grants hostile-awareness knowledge. Its own CI run must still be checked.
 - No guard combat or resident escape behavior has been tested in a running Minecraft world.
 
 ## Unfinished work that must not be forgotten
@@ -57,7 +58,7 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 11. Regression-check scan frequency, cooldowns, goal interruption, inventory races, persistence, loaded-chunk safety, and player-build protection.
 
 ## Next execution order
-1. Check Actions for the latest resident-escape commit; fix any build/test failures.
+1. Check Actions for the latest resident-escape correctness fix; fix any build/test failures.
 2. Review goal priority interactions and test escape behavior in Minecraft.
 3. Add deterministic tests for bounded destination selection and state transitions.
 4. Continue settlement staffing, resource logistics, learning, and simulation.
