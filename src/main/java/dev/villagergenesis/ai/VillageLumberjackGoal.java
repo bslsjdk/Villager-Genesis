@@ -190,12 +190,6 @@ public final class VillageLumberjackGoal extends Goal {
                     if (!level.hasChunkAt(check)) return true;
                     if (level.getBlockEntity(check) != null) return true;
                     BlockState state = level.getBlockState(check);
-                    if (state.is(BlockTags.DOORS) || state.is(BlockTags.BEDS)
-                            || state.is(BlockTags.LOGS) && (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) > 0
-                            && !state.is(BlockTags.LEAVES))) {
-                        // Other nearby logs are permitted as part of the same trunk; only the
-                        // additional checks below are intended to reject obvious structures.
-                    }
                     if (state.is(Blocks.CRAFTING_TABLE) || state.is(Blocks.FURNACE)
                             || state.is(Blocks.CHEST) || state.is(Blocks.BARREL)
                             || state.is(Blocks.BEEHIVE) || state.is(Blocks.BEE_NEST)
@@ -208,22 +202,15 @@ public final class VillageLumberjackGoal extends Goal {
     }
 
     private BlockPos findStorageWithSpace(ServerLevel level, VisibleStorageScanner.Snapshot snapshot) {
+        // Choose an empty slot. The exact block drops are only known after the target is rechecked,
+        // so preselecting a partly filled stack could make the inventory transfer non-atomic.
         for (VisibleStorageScanner.StorageContainer found : snapshot.containers()) {
             BlockPos pos = new BlockPos(found.x(), found.y(), found.z());
             if (!level.hasChunkAt(pos) || !(level.getBlockEntity(pos) instanceof Container container)) continue;
             for (int slot = 0; slot < container.getContainerSize(); slot++) {
-                ItemStack stack = container.getItem(slot);
-                if (stack.isEmpty() || (stack.is(BlockTags.LOGS) && stack.getCount() < stack.getMaxStackSize())) {
+                if (container.getItem(slot).isEmpty()) {
                     targetSlot = slot;
                     return pos;
-                }
-            }
-            if (container.getContainerSize() > 0) {
-                for (int slot = 0; slot < container.getContainerSize(); slot++) {
-                    if (container.getItem(slot).getCount() < container.getItem(slot).getMaxStackSize()) {
-                        targetSlot = slot;
-                        return pos;
-                    }
                 }
             }
         }
@@ -245,26 +232,22 @@ public final class VillageLumberjackGoal extends Goal {
         List<ItemStack> drops = Block.getDrops(state, level, targetLog, blockEntity, villager, tool);
         if (drops.isEmpty() || drops.stream().anyMatch(stack -> !stack.isEmpty() && !isLogItem(stack))) return;
 
-        ItemStack stored = container.getItem(targetSlot);
-        int requiredSlots = 0;
+        if (!container.getItem(targetSlot).isEmpty()) return;
+        int nonEmptyDrops = 0;
         for (ItemStack drop : drops) {
             if (drop.isEmpty()) continue;
-            if (!stored.isEmpty() && !ItemStack.isSameItemSameComponents(stored, drop)) return;
-            if (!stored.isEmpty() && stored.getCount() + drop.getCount() > stored.getMaxStackSize()) return;
-            if (stored.isEmpty()) requiredSlots++;
+            nonEmptyDrops++;
+            if (drop.getCount() > drop.getMaxStackSize()) return;
         }
-        if (requiredSlots > 1) return;
+        if (nonEmptyDrops != 1) return;
 
         // Break without world drops, then transfer the exact game-computed drops into storage.
         // If the block changed between calculation and mutation, no item is granted.
         if (!level.destroyBlock(targetLog, false, villager)) return;
         for (ItemStack drop : drops) {
-            if (drop.isEmpty()) continue;
-            if (stored.isEmpty()) {
+            if (!drop.isEmpty()) {
                 container.setItem(targetSlot, drop.copy());
-                stored = container.getItem(targetSlot);
-            } else {
-                stored.grow(drop.getCount());
+                break;
             }
         }
         container.setChanged();
