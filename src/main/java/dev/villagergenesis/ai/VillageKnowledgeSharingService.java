@@ -37,23 +37,28 @@ public final class VillageKnowledgeSharingService {
 
         long regionKey = (((long) (teacher.blockPosition().getX() >> 5)) << 32)
                 ^ ((teacher.blockPosition().getZ() >> 5) & 0xffffffffL);
+        boolean scanArchive;
         synchronized (NEXT_REGION_SCAN) {
             Map<Long, Long> regions = NEXT_REGION_SCAN.computeIfAbsent(level,
                     ignored -> new HashMap<>());
-            if (level.getGameTime() < regions.getOrDefault(regionKey, 0L)) return;
-            regions.put(regionKey, level.getGameTime() + ARCHIVE_SCAN_INTERVAL);
+            scanArchive = level.getGameTime() >= regions.getOrDefault(regionKey, 0L);
+            if (scanArchive) {
+                regions.put(regionKey, level.getGameTime() + ARCHIVE_SCAN_INTERVAL);
+            }
         }
 
         var sourceMemory = VillagerMemory.forVillager(teacher);
         boolean genius = isGenius(teacher);
 
-        // A physical book can outlive its author. Villagers can recover archived knowledge
-        // before teaching, so knowledge does not disappear with one particular resident.
+        // Throttle expensive physical-container scans, not the whole teaching system. Otherwise
+        // the first villager ticking in a region suppresses every other villager's teaching.
         boolean librarian = teacher.getVillagerData().getProfession()
                 == net.minecraft.world.entity.npc.VillagerProfession.LIBRARIAN;
         int bookSearchRadius = librarian ? 16 : 8;
-        var archivedKnowledge = VillageKnowledgeArchiveService.listArchivedKnowledge(
-                level, teacher.blockPosition(), bookSearchRadius);
+        var archivedKnowledge = scanArchive
+                ? VillageKnowledgeArchiveService.listArchivedKnowledge(
+                        level, teacher.blockPosition(), bookSearchRadius)
+                : java.util.Set.<String>of();
         KnowledgeRegistry registry = new KnowledgeRegistry();
         var knownBeforeReading = sourceMemory.knownKnowledge();
         // Physical books are untrusted input: accept only registered lessons whose prerequisites
@@ -98,7 +103,7 @@ public final class VillageKnowledgeSharingService {
                 .filter(id -> !KnowledgeBaseline.isBaseline(id))
                 .filter(id -> !archivedKnowledge.contains(id))
                 .sorted().findFirst().orElse(null);
-        if (archiveCandidate != null) {
+        if (scanArchive && archiveCandidate != null) {
             VillageKnowledgeArchiveService.archiveOne(level, teacher.blockPosition(), archiveCandidate);
         }
 
