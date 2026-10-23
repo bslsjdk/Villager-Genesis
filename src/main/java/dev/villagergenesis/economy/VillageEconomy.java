@@ -51,6 +51,22 @@ public final class VillageEconomy {
         for (Resource resource : Resource.values()) stock.put(resource, 0);
     }
 
+    /**
+     * Replace the planning ledger with counts read from actual public containers.
+     * Call this after each world scan; do not increment the ledger from planned actions.
+     */
+    public void synchronizeVisibleStorage(VisibleStorageScanner.Snapshot snapshot) {
+        if (snapshot == null) throw new IllegalArgumentException("A real storage snapshot is required.");
+        setStock(Resource.BREAD, snapshot.count(VisibleStorageScanner.Resource.BREAD));
+        setStock(Resource.CARROTS, snapshot.count(VisibleStorageScanner.Resource.CARROTS));
+        setStock(Resource.POTATOES, snapshot.count(VisibleStorageScanner.Resource.POTATOES));
+        setStock(Resource.BEETROOT, snapshot.count(VisibleStorageScanner.Resource.BEETROOT));
+        setStock(Resource.WHEAT, snapshot.count(VisibleStorageScanner.Resource.WHEAT));
+        setStock(Resource.SEEDS, snapshot.count(VisibleStorageScanner.Resource.SEEDS));
+        setStock(Resource.WOOD, snapshot.count(VisibleStorageScanner.Resource.WOOD));
+        setStock(Resource.STONE, snapshot.count(VisibleStorageScanner.Resource.STONE));
+    }
+
     public void setStock(Resource resource, int count) {
         if (resource == null || count < 0) throw new IllegalArgumentException("Resource and non-negative count required.");
         stock.put(resource, count);
