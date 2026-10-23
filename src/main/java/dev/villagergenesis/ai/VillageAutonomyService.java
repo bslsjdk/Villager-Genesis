@@ -27,6 +27,8 @@ public final class VillageAutonomyService {
             villager.goalSelector.addGoal(0, new VillageResidentFleeGoal(villager));
             // Only assigned guards receive the mod-owned hostile-mob combat behavior.
             villager.goalSelector.addGoal(2, new VillageGuardCombatGoal(villager));
+            // Until a real bed is available, residents rest on safe ground at night.
+            villager.goalSelector.addGoal(3, new VillageGroundRestGoal(villager));
             // Real construction may preempt farming, but urgent vanilla behaviors retain priority.
             villager.goalSelector.addGoal(6, new VillageEquipmentGoal(villager));
             // Founding residents turn real carried logs into planks and then a crafting table.
