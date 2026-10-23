@@ -31,6 +31,8 @@ public final class VillageAutonomyService {
             villager.goalSelector.addGoal(3, new VillageGroundRestGoal(villager));
             // Real construction may preempt farming, but urgent vanilla behaviors retain priority.
             villager.goalSelector.addGoal(6, new VillageEquipmentGoal(villager));
+            // Founders can build a tiny lean-to from nine real carried planks before a full house exists.
+            villager.goalSelector.addGoal(7, new VillageStarterShelterGoal(villager));
             // Founding residents turn real carried logs into planks and then a crafting table.
             villager.goalSelector.addGoal(7, new VillageBootstrapCraftingGoal(villager));
             // Basic tools require real planks/sticks and an actually placed crafting table.
