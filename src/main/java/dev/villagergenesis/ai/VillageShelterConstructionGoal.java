@@ -137,7 +137,7 @@ public final class VillageShelterConstructionGoal extends Goal {
                 BlockPos center = origin.offset(dx, 0, dz);
                 BlockPos floorPos = center.below();
                 if (!level.hasChunkAt(floorPos) || !level.hasChunkAt(center.offset(-1, 2, -1))
-                        || !level.hasChunkAt(center.offset(1, 2, 1))) continue;
+                        || !level.hasChunkAt(center.offset(1, 3, 1))) continue;
                 BlockState floor = level.getBlockState(floorPos);
                 if (!(floor.is(Blocks.GRASS_BLOCK) || floor.is(Blocks.DIRT)
                         || floor.is(Blocks.COARSE_DIRT) || floor.is(Blocks.PODZOL)
@@ -146,7 +146,7 @@ public final class VillageShelterConstructionGoal extends Goal {
                 boolean clear = true;
                 for (int x = -1; x <= 1 && clear; x++) {
                     for (int z = -1; z <= 1 && clear; z++) {
-                        for (int y = 0; y <= 2; y++) {
+                        for (int y = 0; y <= 3; y++) {
                             BlockPos p = center.offset(x, y, z);
                             if (!level.hasChunkAt(p) || !level.getBlockState(p).isAir()
                                     || !level.getFluidState(p).isEmpty()) {
@@ -173,7 +173,7 @@ public final class VillageShelterConstructionGoal extends Goal {
     private void build(ServerLevel level) {
         if (source == null || site == null || !level.hasChunkAt(source)
                 || !level.hasChunkAt(site.offset(-1, 2, -1))
-                || !level.hasChunkAt(site.offset(1, 2, 1))) return;
+                || !level.hasChunkAt(site.offset(1, 3, 1))) return;
         if (!(level.getBlockEntity(source) instanceof Container container)
                 || sourceSlot < 0 || sourceSlot >= container.getContainerSize()) return;
         ItemStack stored = container.getItem(sourceSlot);
