@@ -109,10 +109,18 @@ public final class SettlementEmergenceModel {
         if (!s.safeSite() || s.residents() < 2 || s.residentsReturningToArea() < 2) {
             return Stage.WANDERING_GROUP;
         }
-        if (s.distinctResidentDays() >= 2 && (s.readyFoodItems() >= s.residents() * 2
-                || s.foodSources() > 0 || s.activeFarmPlots() > 0)) {
-            return Stage.GATHERING;
+
+        // Test the most mature stage first. Returning early on the gathering criteria made
+        // CAMP and VILLAGE unreachable because their surveys also satisfy the weaker food rules.
+        if (s.distinctResidentDays() >= 12 && s.residents() >= 5
+                && s.residentsReturningToArea() >= Math.max(4, (s.residents() * 3) / 4)
+                && s.usableBeds() >= Math.max(3, (s.residents() + 1) / 2)
+                && (s.foodSources() > 0 || s.activeFarmPlots() >= 2)
+                && s.completedSharedProjects() >= 2
+                && s.availableBuildingMaterials() >= 32) {
+            return Stage.VILLAGE;
         }
+
         if (s.distinctResidentDays() >= 5 && s.residents() >= 3
                 && s.residentsReturningToArea() >= Math.max(3, (s.residents() * 2) / 3)
                 && (s.usableBeds() > 0 || s.shelteredResidents() > 0)
@@ -121,13 +129,10 @@ public final class SettlementEmergenceModel {
                 && (s.completedSharedProjects() > 0 || s.availableBuildingMaterials() >= 16)) {
             return Stage.CAMP;
         }
-        if (s.distinctResidentDays() >= 12 && s.residents() >= 5
-                && s.residentsReturningToArea() >= Math.max(4, (s.residents() * 3) / 4)
-                && s.usableBeds() >= Math.max(3, (s.residents() + 1) / 2)
-                && (s.foodSources() > 0 || s.activeFarmPlots() >= 2)
-                && s.completedSharedProjects() >= 2
-                && s.availableBuildingMaterials() >= 32) {
-            return Stage.VILLAGE;
+
+        if (s.distinctResidentDays() >= 2 && (s.readyFoodItems() >= s.residents() * 2
+                || s.foodSources() > 0 || s.activeFarmPlots() > 0)) {
+            return Stage.GATHERING;
         }
         return Stage.WANDERING_GROUP;
     }
