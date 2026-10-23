@@ -57,6 +57,22 @@ public final class SettlementTaskQueue extends SavedData {
                 .min(Comparator.comparingLong(Task::createdAt).thenComparing(t -> t.id.toString()))
                 .orElse(null);
     }
+    /** Atomically claims a pending or interrupted task and counts this processing attempt. */
+    public boolean claimForProcessing(UUID taskId, long gameTime) {
+        Objects.requireNonNull(taskId, "taskId");
+        for (Task task : tasks) {
+            if (!task.id.equals(taskId)) continue;
+            if (task.status != Status.PENDING && task.status != Status.IN_PROGRESS) return false;
+            task.status = Status.IN_PROGRESS;
+            task.attempts = Math.min(Integer.MAX_VALUE, task.attempts + 1);
+            task.progress = Math.max(task.progress, 10);
+            task.updatedAt = Math.max(task.updatedAt, gameTime);
+            setDirty();
+            return true;
+        }
+        return false;
+    }
+
     public boolean update(UUID taskId, Status status, int progress, long gameTime) {
         Objects.requireNonNull(taskId,"taskId"); Objects.requireNonNull(status,"status");
         for(Task task:tasks) if(task.id.equals(taskId)) {
