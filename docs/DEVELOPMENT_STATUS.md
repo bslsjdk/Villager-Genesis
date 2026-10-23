@@ -36,6 +36,9 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 
 ## Latest validation
 
+- Commit e42260fe9a84cb69557f3bca16dea4d918d61d0f adds `VillageGroundRestGoal`: at night, if no bed is found within 12 blocks, villagers seek a safe, dry resting spot, preferring a roofed location and falling back to open ground. They stop resting at daytime or if hostile monsters approach. This goal does not place blocks or consume resources; it uses the sleeping pose for ground-rest visualization, not vanilla bed sleep state. Runtime behavior remains unverified until CI and in-game testing.
+
+
 - Commit 321ef46758cdde91e55fce923cb800f2bddcfbf0 fixes the invalid `Blocks.BED` reference in the seed-gathering protection check. CI run 40014123082 was running at last check; do not mark this build passed until Actions confirms it.
 - Commit 67bb09a17a6dece089d8a9152b28d5fb27efa0c adds `VillageFoodDeliveryGoal`: eligible farmers, gatherers, caretakers, and mayors can move real bread/carrots/potatoes/beetroots from their personal inventory into a nearby loaded chest, trapped chest, or barrel. It does not create food or load chunks. The goal is registered in `VillageAutonomyService`; compilation and in-game behavior remain unverified until CI and gameplay testing.
 
