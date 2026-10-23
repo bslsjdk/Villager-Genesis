@@ -105,7 +105,8 @@ public final class VillageFarmlandPreparationGoal extends Goal {
             for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
                 for (int dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) {
                     BlockPos pos = origin.offset(dx, dy, dz);
-                    if (!level.hasChunkAt(pos) || !isTillableGround(level.getBlockState(pos))
+                    if (pos.distSqr(origin) > 9.0D || !level.hasChunkAt(pos)
+                            || !isTillableGround(level.getBlockState(pos))
                             || !level.getBlockState(pos.above()).isAir()
                             || !hasNearbyWater(level, pos) || isProtectedArea(level, pos)) continue;
                     double distance = pos.distSqr(origin);
