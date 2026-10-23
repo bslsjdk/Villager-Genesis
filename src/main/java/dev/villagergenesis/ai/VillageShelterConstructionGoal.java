@@ -63,7 +63,7 @@ public final class VillageShelterConstructionGoal extends Goal {
         } catch (IllegalArgumentException exception) {
             return false;
         }
-        source = findPlankSource(level, snapshot);
+        source = findMaterialSource(level, snapshot, constructionMaterial());
         if (source == null) return false;
         site = findSite(level, villager.blockPosition());
         return site != null;
@@ -117,13 +117,14 @@ public final class VillageShelterConstructionGoal extends Goal {
         finished = false;
     }
 
-    private BlockPos findPlankSource(ServerLevel level, VisibleStorageScanner.Snapshot snapshot) {
+    private BlockPos findMaterialSource(ServerLevel level, VisibleStorageScanner.Snapshot snapshot,
+                                        net.minecraft.world.item.Item material) {
         for (VisibleStorageScanner.StorageContainer found : snapshot.containers()) {
             BlockPos pos = new BlockPos(found.x(), found.y(), found.z());
             if (!level.hasChunkAt(pos) || !(level.getBlockEntity(pos) instanceof Container container)) continue;
             for (int slot = 0; slot < container.getContainerSize(); slot++) {
                 ItemStack stack = container.getItem(slot);
-                if (stack.is(Items.OAK_PLANKS) && stack.getCount() >= REQUIRED_PLANKS) {
+                if (stack.is(material) && stack.getCount() >= REQUIRED_PLANKS) {
                     sourceSlot = slot;
                     return pos;
                 }
@@ -187,7 +188,8 @@ public final class VillageShelterConstructionGoal extends Goal {
         if (!(level.getBlockEntity(source) instanceof Container container)
                 || sourceSlot < 0 || sourceSlot >= container.getContainerSize()) return;
         ItemStack stored = container.getItem(sourceSlot);
-        if (!stored.is(Items.OAK_PLANKS) || stored.getCount() < REQUIRED_PLANKS) return;
+        net.minecraft.world.item.Item material = constructionMaterial();
+        if (!stored.is(material) || stored.getCount() < REQUIRED_PLANKS) return;
 
         List<BlockPos> positions = new ArrayList<>(REQUIRED_PLANKS);
         for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) positions.add(site.offset(x, 0, z));
@@ -208,9 +210,9 @@ public final class VillageShelterConstructionGoal extends Goal {
 
         ItemStack original = stored.copy();
         List<BlockPos> placed = new ArrayList<>();
-        BlockState plank = Blocks.OAK_PLANKS.defaultBlockState();
+        BlockState buildingBlock = constructionBlock().defaultBlockState();
         for (BlockPos pos : positions) {
-            if (!level.setBlock(pos, plank, Block.UPDATE_ALL)) {
+            if (!level.setBlock(pos, buildingBlock, Block.UPDATE_ALL)) {
                 for (BlockPos rollback : placed) level.setBlock(rollback, Blocks.AIR.defaultBlockState(), 3);
                 container.setItem(sourceSlot, original.copy());
                 container.setChanged();
@@ -227,8 +229,9 @@ public final class VillageShelterConstructionGoal extends Goal {
         villager.getPersistentData().putInt("villager_genesis_shelters_built",
                 villager.getPersistentData().getInt("villager_genesis_shelters_built") + 1);
         VillageStructureRegistry registry = VillageStructureRegistry.get(level);
+        String structureType = structureType();
         for (BlockPos pos : placed) {
-            registry.registerPlacedBlock(pos, "shelter_oak", villager.getUUID(), level.getGameTime());
+            registry.registerPlacedBlock(pos, structureType, villager.getUUID(), level.getGameTime());
         }
         VillagerMemory.forVillager(villager).recordActionOutcome("build_shelter", "success",
                 "Built a 3x3 oak shelter from 33 real planks taken from village storage.", level.getGameTime());
@@ -239,14 +242,29 @@ public final class VillageShelterConstructionGoal extends Goal {
         return role == VillageRoleService.Role.BUILDER || role == VillageRoleService.Role.MASON;
     }
 
+    private net.minecraft.world.item.Item constructionMaterial() {
+        return VillageRoleService.roleOf(villager) == VillageRoleService.Role.MASON
+                ? Items.COBBLESTONE : Items.OAK_PLANKS;
+    }
+
+    private net.minecraft.world.level.block.Block constructionBlock() {
+        return VillageRoleService.roleOf(villager) == VillageRoleService.Role.MASON
+                ? Blocks.COBBLESTONE : Blocks.OAK_PLANKS;
+    }
+
+    private String structureType() {
+        return VillageRoleService.roleOf(villager) == VillageRoleService.Role.MASON
+                ? "shelter_stone" : "shelter_oak";
+    }
+
     private boolean hasNearbyRegisteredShelter(ServerLevel level, BlockPos origin) {
         long maxDistance = 24L * 24L;
         for (VillageStructureRegistry.OwnedBlock block
-                : VillageStructureRegistry.get(level).blocksOfType("shelter_oak")) {
+                : VillageStructureRegistry.get(level).blocksOfType(structureType())) {
             if (block.pos().distSqr(origin) <= maxDistance) {
                 // Ignore stale records if a player has already removed the registered block.
                 if (level.hasChunkAt(block.pos())
-                        && level.getBlockState(block.pos()).is(Blocks.OAK_PLANKS)) {
+                        && level.getBlockState(block.pos()).is(constructionBlock())) {
                     return true;
                 }
             }
