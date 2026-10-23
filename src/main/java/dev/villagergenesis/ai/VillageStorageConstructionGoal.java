@@ -44,6 +44,7 @@ public final class VillageStorageConstructionGoal extends Goal {
     private int travelTicks;
     private int retryTicks;
     private boolean finished;
+    private long scanRegionKey;
 
     public VillageStorageConstructionGoal(Villager villager) {
         this.villager = villager;
@@ -57,13 +58,13 @@ public final class VillageStorageConstructionGoal extends Goal {
                 || !villager.getNavigation().isDone()) return false;
 
         long now = level.getGameTime();
-        long regionKey = (((long) (villager.blockPosition().getX() >> 5)) << 32)
+        scanRegionKey = (((long) (villager.blockPosition().getX() >> 5)) << 32)
                 ^ ((villager.blockPosition().getZ() >> 5) & 0xffffffffL);
         synchronized (NEXT_SETTLEMENT_SCAN) {
             Map<Long, Long> regions = NEXT_SETTLEMENT_SCAN.computeIfAbsent(level,
                     ignored -> new java.util.HashMap<>());
-            if (now < regions.getOrDefault(regionKey, 0L)) return false;
-            regions.put(regionKey, now + SCAN_INTERVAL);
+            if (now < regions.getOrDefault(scanRegionKey, 0L)) return false;
+            regions.put(scanRegionKey, now + SCAN_INTERVAL);
         }
 
         VisibleStorageScanner.Snapshot snapshot;
@@ -90,10 +91,8 @@ public final class VillageStorageConstructionGoal extends Goal {
             source = null;
             return false;
         }
-        synchronized (NEXT_SETTLEMENT_SCAN) {
-            NEXT_SETTLEMENT_SCAN.getOrDefault(level, java.util.Map.of())
-                    .put(regionKey, now + RETRY_AFTER_BUILD);
-        }
+        // Long cooldown is applied only after a successful build. Pathing failures or
+        // stale materials must be eligible for another attempt after the short scan interval.
         return true;
     }
 
@@ -289,6 +288,10 @@ public final class VillageStorageConstructionGoal extends Goal {
             return;
         }
         VillageStructureRegistry.get(level).registerPlacedBlock(destination, "storage_barrel", villager.getUUID(), level.getGameTime());
+        synchronized (NEXT_SETTLEMENT_SCAN) {
+            NEXT_SETTLEMENT_SCAN.computeIfAbsent(level, ignored -> new HashMap<>())
+                    .put(scanRegionKey, level.getGameTime() + RETRY_AFTER_BUILD);
+        }
         container.setChanged();
         villager.getPersistentData().putInt("villager_genesis_storage_builds",
                 villager.getPersistentData().getInt("villager_genesis_storage_builds") + 1);
