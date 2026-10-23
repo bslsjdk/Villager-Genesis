@@ -2,6 +2,9 @@ package dev.villagergenesis.ai;
 
 import dev.villagergenesis.memory.VillagerMemory;
 import dev.villagergenesis.society.VillageRoleService;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -31,6 +34,7 @@ import java.util.List;
 public final class VillageCropWorkGoal extends Goal {
     private static final String NEXT_TRY = "villager_genesis_next_crop_work";
     private static final String NEXT_SCAN = "villager_genesis_next_crop_scan";
+    private static final String MANAGED_CROPS = "villager_genesis_managed_crops";
     private static final int WORK_COOLDOWN = 100;
     private static final int SCAN_COOLDOWN = 80;
     private static final int SEARCH_RADIUS = 6;
@@ -82,6 +86,7 @@ public final class VillageCropWorkGoal extends Goal {
             if (drops.isEmpty() || !canFitDrops(inventory, drops)) return;
             if (!level.destroyBlock(target, false, villager)) return;
             for (ItemStack drop : drops) insert(inventory, drop.copy());
+            untrackCrop(target);
             inventory.setChanged();
             level.playSound(null, target, SoundEvents.CROP_BREAK, SoundSource.BLOCKS, 0.7F, 0.9F);
             VillagerMemory.forVillager(villager).recordActionOutcome("harvest_crop", "success",
@@ -99,6 +104,7 @@ public final class VillageCropWorkGoal extends Goal {
                 inventory.setChanged();
                 return;
             }
+            trackCrop(target.above());
             inventory.setChanged();
             level.playSound(null, target.above(), SoundEvents.CROP_PLANTED, SoundSource.BLOCKS, 0.7F, 1.0F);
             VillagerMemory.forVillager(villager).recordActionOutcome("plant_crop", "success",
@@ -140,8 +146,11 @@ public final class VillageCropWorkGoal extends Goal {
                     BlockState state = level.getBlockState(pos);
                     double distance = pos.distSqr(origin);
 
-                    if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)) {
-                        if (distance < ripeDistance && hasPotentialDropSpace(inventory)) {
+                    if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)
+                            && isManagedCrop(pos)) {
+                        List<ItemStack> drops = Block.getDrops(state, level, pos,
+                                level.getBlockEntity(pos), villager, villager.getMainHandItem());
+                        if (distance < ripeDistance && !drops.isEmpty() && canFitDrops(inventory, drops)) {
                             ripe = pos.immutable();
                             ripeDistance = distance;
                         }
@@ -185,6 +194,40 @@ public final class VillageCropWorkGoal extends Goal {
         return null;
     }
 
+    private boolean isManagedCrop(BlockPos pos) {
+        ListTag crops = villager.getPersistentData().getList(MANAGED_CROPS, Tag.TAG_COMPOUND);
+        for (int i = 0; i < crops.size(); i++) {
+            CompoundTag entry = crops.getCompound(i);
+            if (entry.getInt("x") == pos.getX() && entry.getInt("y") == pos.getY()
+                    && entry.getInt("z") == pos.getZ()) return true;
+        }
+        return false;
+    }
+
+    private void trackCrop(BlockPos pos) {
+        if (isManagedCrop(pos)) return;
+        ListTag crops = villager.getPersistentData().getList(MANAGED_CROPS, Tag.TAG_COMPOUND);
+        // Keep the personal farm bounded. The villager will harvest before adding more once full.
+        if (crops.size() >= 24) return;
+        CompoundTag entry = new CompoundTag();
+        entry.putInt("x", pos.getX());
+        entry.putInt("y", pos.getY());
+        entry.putInt("z", pos.getZ());
+        crops.add(entry);
+        villager.getPersistentData().put(MANAGED_CROPS, crops);
+    }
+
+    private void untrackCrop(BlockPos pos) {
+        ListTag old = villager.getPersistentData().getList(MANAGED_CROPS, Tag.TAG_COMPOUND);
+        ListTag kept = new ListTag();
+        for (int i = 0; i < old.size(); i++) {
+            CompoundTag entry = old.getCompound(i);
+            if (entry.getInt("x") != pos.getX() || entry.getInt("y") != pos.getY()
+                    || entry.getInt("z") != pos.getZ()) kept.add(entry.copy());
+        }
+        villager.getPersistentData().put(MANAGED_CROPS, kept);
+    }
+
     private int count(Container inventory, Item item) {
         int total = 0;
         for (int i = 0; i < inventory.getContainerSize(); i++) {
@@ -202,14 +245,6 @@ public final class VillageCropWorkGoal extends Goal {
             if (stack.isEmpty()) inventory.setItem(i, ItemStack.EMPTY);
             inventory.setChanged();
             return true;
-        }
-        return false;
-    }
-
-    private boolean hasPotentialDropSpace(Container inventory) {
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
-            if (inventory.getItem(i).isEmpty()
-                    || inventory.getItem(i).getCount() < inventory.getItem(i).getMaxStackSize()) return true;
         }
         return false;
     }
