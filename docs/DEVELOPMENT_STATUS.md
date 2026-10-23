@@ -2,7 +2,7 @@
 
 Last updated: 2026-10-23
 Repository: https://github.com/bslsjdk/Villager-Genesis
-Working branch: `feat/settlement-resource-jobs`
+Working branch: feat/settlement-resource-jobs
 Minecraft: Java 1.21.1, NeoForge 21.1.264
 
 This file is a continuity ledger. Keep implemented, CI-verified, in-game-verified, and planned work separate. Do not mark a feature complete merely because source code was committed.
@@ -21,10 +21,10 @@ This file is a continuity ledger. Keep implemented, CI-verified, in-game-verifie
 
 ## Repository / PR state
 
-- Working branch: `feat/settlement-resource-jobs`
+- Working branch: feat/settlement-resource-jobs
 - Draft PR #14: https://github.com/bslsjdk/Villager-Genesis/pull/14
 - Draft PR #13: https://github.com/bslsjdk/Villager-Genesis/pull/13
-- Base branch mentioned for PR #14: `release/0.2-autonomous-settlement-loop`
+- Base branch mentioned for PR #14: release/0.2-autonomous-settlement-loop
 - Do not merge either PR without explicit user authorization.
 
 ## Implemented foundations (source exists; distinguish from in-game verification)
@@ -37,39 +37,36 @@ This file is a continuity ledger. Keep implemented, CI-verified, in-game-verifie
 - Storage expansion is restricted to CRAFTER, CARETAKER, and MAYOR.
 - MAYOR was added to initial role assignment.
 - Autonomy service installs equipment, storage construction, shelter construction, and exploration goals once per live villager entity instance.
-- Equipment goal can take one real weapon (sword/axe), shield, or armor piece from nearby real storage and equip an empty slot. It records basic-defense knowledge only after successful equipment transfer. Guards are eligible; a stable minority of ordinary residents can be eligible too.
-- Latest completed CI known at time of writing: equipment implementation commit `cd4898644a73b4dfd10c4f839d1228c5b3493043` (verify exact SHA in GitHub if needed; run #40004787792 succeeded). Earlier mayor/storage role changes also passed CI.
+- Equipment goal takes real weapons, shields, or armor from nearby real storage and equips an empty slot. Guards can now also equip a real bow from storage. It records basic-defense knowledge only after successful equipment transfer. Guards are eligible; a stable minority of ordinary residents can be eligible too.
+- Guard combat goal prioritizes hostile mobs targeting villagers, uses melee combat at close range, and records successful outcomes.
+- New ranged-combat code attempts to take one real arrow from nearby scanned storage per shot, consumes it before spawning the projectile, and fires only at hostile Monster targets. This code is committed but its compilation/API compatibility and behavior still need validation.
 
-## Combat work currently in progress / must be verified
+## Recent commits and validation
 
-- New `VillageGuardCombatGoal.java` was added to provide guard-only melee response to hostile `Monster` entities.
-- Goal is installed at priority 2 in `VillageAutonomyService`.
-- It prioritizes monsters targeting villagers, chases with a bounded post distance, uses vanilla `doHurtTarget`, and records successful combat outcomes in villager memory.
-- Recent commits:
-  - `33e2126745f9abf9a05899d33f349e15e95d8cf1`: add guard-only hostile mob melee response.
-  - `2f9254cd11af36362c9d900ff2ef5d66feb6db90`: install combat goal.
-  - `35c432ac1ad67041f4cfe9592f044be11fd72da8`: prioritize threats attacking residents and record combat outcomes, remove an unused import.
-- CI run #40005033131 was in progress when this note was written; inspect Actions before further changes. The combat implementation is NOT yet confirmed CI-passing or in-game-tested.
-- Equipment implementation's CI did pass at run #40004787792, but a later run at an earlier intermediate commit failed because the service referenced a missing class before the equipment file was committed. The later equipment commit passed; do not treat that historical failure as the current final equipment status.
+- 35c432ac1ad67041f4cfe9592f044be11fd72da8: prioritize threats attacking residents and record guard combat outcomes. GitHub Actions Build run #273 (40005041368) completed successfully.
+- b7abf184790d97f636dc7f6ca860d000f0253220: allow guards to equip real bows from village storage.
+- 96351d82c1b5722f68451d13c4417e7f8f7670fd: add guard bow attacks using real stored arrows.
+- At the time of this update, the GitHub connector has not yet returned a workflow run/status for commit 96351d82c1b5722f68451d13c4417e7f8f7670fd. Treat ranged-combat compilation as pending, not passed.
+- No Minecraft in-game test has been performed for guard combat or ranged combat.
 
 ## Explicitly unfinished work (preserve this backlog)
 
-1. **Guard ranged combat with bows**: select/equip real bows from storage, acquire real arrows, consume ammunition, target hostile mobs, shoot using correct 1.21.1/NeoForge APIs, avoid friendly fire and excessive pursuit. Not implemented yet.
-2. **Shield blocking**: actual block/raise-shield behavior when threatened, not merely holding a shield. Not implemented yet.
-3. **Equipment wear and maintenance**: respect durability, detect damaged/broken equipment, use real repair materials or vanilla-compatible repair/crafting logic, and replace only from actual available supplies. Not implemented yet.
-4. **Combat coordination**: multiple guards should avoid all piling onto one target when other villagers are threatened; define protection radius/posting and response priorities. Only rudimentary target preference currently exists.
-5. **Ordinary resident self-defence**: maintain optional/stable learning/equipment behavior; ensure untrained residents can flee/seek guards instead of being forced into combat. Not implemented as a complete behavior.
-6. **After-combat learning**: turn observed outcomes into useful defensive knowledge/strategy only when justified by actual events, not simply grant arbitrary skills. Currently only a successful-hit outcome is recorded.
-7. **Combat testing**: add deterministic tests where feasible and check GitHub Actions. Actual in-game testing remains outstanding.
-8. **Dynamic role/staffing system**: current UUID-based role assignment is static. Need future allocation that accounts for settlement needs, available population, skills, and profession rather than immutable random roles.
-9. **Resource jobs and social learning**: extend real gathering/crafting/logistics, teacher-to-student knowledge transfer, career specialization and mobility; avoid duplicate vanilla profession systems.
-10. **Settlement simulation**: food, housing, population, territory, diplomacy and other WorldBox-like settlement behavior remain incomplete. Do not claim implemented from role/knowledge metadata alone.
-11. **Safety/performance regression checks**: every world scan and action must stay within loaded chunks, avoid modifying player builds, and not repeatedly rescan containers every tick. Check cooldowns, goal interruption, inventory races, and persistence.
+1. Ranged combat validation: confirm the 1.21.1 ArrowItem/projectile API compiles; test trajectory, aim, arrow consumption, and missing-ammunition behavior.
+2. Shield blocking: actual block/raise-shield behavior when threatened, not merely holding a shield. Not implemented yet.
+3. Equipment wear and maintenance: respect durability, detect damaged/broken equipment, use real repair materials or vanilla-compatible repair/crafting logic, and replace only from actual available supplies.
+4. Combat coordination: multiple guards should avoid all piling onto one target when other villagers are threatened; define protection radius/posting and response priorities. Only rudimentary target preference currently exists.
+5. Ordinary resident self-defence: maintain optional/stable learning/equipment behavior; ensure untrained residents can flee/seek guards instead of being forced into combat. Not implemented as a complete behavior.
+6. After-combat learning: turn observed outcomes into useful defensive knowledge/strategy only when justified by actual events, not simply grant arbitrary skills. Currently only successful attack outcomes are recorded.
+7. Combat testing: add deterministic tests where feasible and check GitHub Actions. Actual in-game testing remains outstanding.
+8. Dynamic role/staffing system: current UUID-based role assignment is static. Need future allocation that accounts for settlement needs, available population, skills, and profession rather than immutable random roles.
+9. Resource jobs and social learning: extend real gathering/crafting/logistics, teacher-to-student knowledge transfer, career specialization and mobility; avoid duplicate vanilla profession systems.
+10. Settlement simulation: food, housing, population, territory, diplomacy and other WorldBox-like settlement behavior remain incomplete. Do not claim implemented from role/knowledge metadata alone.
+11. Safety/performance regression checks: every world scan and action must stay within loaded chunks, avoid modifying player builds, and not repeatedly rescan containers every tick. Check cooldowns, goal interruption, inventory races, and persistence.
 
 ## Next execution order
 
-1. Check Actions for latest combat commits and fix compile/test failures before adding more features.
-2. Inspect actual 1.21.1 mappings/API for ranged bow use and ammunition consumption; implement guard ranged combat with real stored bow/arrows.
+1. Check CI for commit 96351d82c1b5722f68451d13c4417e7f8f7670fd; fix compilation/test failures before adding more combat behavior.
+2. Validate ranged combat, including real arrow consumption and correct projectile API.
 3. Implement shield blocking and a safe resident flee/guard-seeking response.
 4. Add equipment durability/maintenance and better coordinated threat assignment.
 5. Add tests and keep CI results recorded; game behavior still needs a real in-game check.
@@ -78,9 +75,9 @@ This file is a continuity ledger. Keep implemented, CI-verified, in-game-verifie
 ## Accuracy rules for progress reports
 
 Use separate labels:
-- **Committed**: code is in the branch.
-- **CI passed**: GitHub Actions for the relevant commit completed successfully.
-- **In-game verified**: actually tested in Minecraft; do not infer from CI.
-- **Not implemented**: keep explicitly listed until code and validation exist.
+- Committed: code is in the branch.
+- CI passed: GitHub Actions for the relevant commit completed successfully.
+- In-game verified: actually tested in Minecraft; do not infer from CI.
+- Not implemented: keep explicitly listed until code and validation exist.
 
-Never say bow combat, shield blocking, maintenance, coordinated defense, or full after-combat learning are complete until they are implemented and validated.
+Never say shield blocking, maintenance, coordinated defense, complete resident self-defence, or full after-combat learning are complete until implemented and validated.
