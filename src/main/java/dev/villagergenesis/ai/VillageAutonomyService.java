@@ -24,6 +24,7 @@ public final class VillageAutonomyService {
             // Social identity is mod-owned and independent of the vanilla profession.
             VillageRoleService.ensureRole(villager);
             // Real construction may preempt farming, but urgent vanilla behaviors retain priority.
+            villager.goalSelector.addGoal(6, new VillageEquipmentGoal(villager));
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
             // The shelter is a mod-owned construction behavior, not a duplicate of vanilla farming.
             villager.goalSelector.addGoal(8, new VillageShelterConstructionGoal(villager));
