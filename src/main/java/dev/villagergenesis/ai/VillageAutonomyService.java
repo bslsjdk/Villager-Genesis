@@ -35,6 +35,8 @@ public final class VillageAutonomyService {
             villager.goalSelector.addGoal(7, new VillageToolCraftingGoal(villager));
             // Farmers can only create farmland when they actually hold a usable hoe.
             villager.goalSelector.addGoal(8, new VillageFarmlandPreparationGoal(villager));
+            // Plant only real seeds and harvest only crops this villager recorded planting.
+            villager.goalSelector.addGoal(8, new VillageCropWorkGoal(villager));
             villager.goalSelector.addGoal(7, new VillageWorkbenchPlacementGoal(villager));
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
             // Lumberjacks turn naturally grown trees into real stored building material.
