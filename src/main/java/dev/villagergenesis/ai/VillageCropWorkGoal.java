@@ -43,16 +43,18 @@ public final class VillageCropWorkGoal extends Goal {
     private BlockPos target;
     private boolean harvest;
     private boolean finished;
+    private int travelTicks;
+    private static final int MAX_TRAVEL_TICKS = 120;
 
     public VillageCropWorkGoal(Villager villager) {
         this.villager = villager;
-        setFlags(EnumSet.noneOf(Flag.class));
+        setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
     public boolean canUse() {
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
-                || villager.isBaby() || villager.getTarget() != null
+                || villager.isBaby() || villager.getTarget() != null || !villager.getNavigation().isDone()
                 || VillageRoleService.ensureRole(villager) != VillageRoleService.Role.FARMER
                 || level.getGameTime() < villager.getPersistentData().getLong(NEXT_TRY)) return false;
         ItemStack tool = villager.getMainHandItem();
@@ -66,15 +68,26 @@ public final class VillageCropWorkGoal extends Goal {
     @Override
     public void start() {
         finished = false;
+        travelTicks = 0;
         villager.getPersistentData().putString("villager_genesis_current_goal",
                 harvest ? "harvest_crop" : "plant_crop");
+        navigate();
     }
 
     @Override
     public void tick() {
         if (finished) return;
+        travelTicks++;
+        if (!(villager.level() instanceof ServerLevel level) || target == null || !level.hasChunkAt(target)) {
+            finished = true;
+            return;
+        }
+        if (villager.blockPosition().distSqr(target) > 4.0D) {
+            if (travelTicks >= MAX_TRAVEL_TICKS) finished = true;
+            else if (villager.getNavigation().isDone() && travelTicks % 20 == 0) navigate();
+            return;
+        }
         finished = true;
-        if (!(villager.level() instanceof ServerLevel level) || target == null || !level.hasChunkAt(target)) return;
         ItemStack hoe = villager.getMainHandItem();
         if (!(hoe.getItem() instanceof HoeItem) || hoe.getDamageValue() >= hoe.getMaxDamage()) return;
         Container inventory = villager.getInventory();
@@ -119,15 +132,23 @@ public final class VillageCropWorkGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return !finished && villager.isAlive();
+        return !finished && target != null && travelTicks < MAX_TRAVEL_TICKS && villager.isAlive();
     }
 
     @Override
     public void stop() {
+        villager.getNavigation().stop();
         villager.getPersistentData().putString("villager_genesis_current_goal", "observe");
         target = null;
         harvest = false;
         finished = false;
+        travelTicks = 0;
+    }
+
+    private void navigate() {
+        if (target == null) return;
+        double y = harvest ? target.getY() : target.getY() + 1.0D;
+        villager.getNavigation().moveTo(target.getX() + 0.5D, y, target.getZ() + 0.5D, 0.8D);
     }
 
     private BlockPos findTarget(ServerLevel level, BlockPos origin) {
