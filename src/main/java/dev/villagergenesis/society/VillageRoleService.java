@@ -1,6 +1,7 @@
 package dev.villagergenesis.society;
 
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.particles.ParticleTypes;
 
@@ -53,8 +54,11 @@ public final class VillageRoleService {
         Role existing = Role.fromId(data.getString(ROLE_KEY));
         if (existing != null) return existing;
 
-        int index = Math.floorMod(villager.getUUID().hashCode(), INITIAL_ROLES.size());
-        Role assigned = INITIAL_ROLES.get(index);
+        Role assigned = chooseFoundingRole(villager);
+        if (assigned == null) {
+            int index = Math.floorMod(villager.getUUID().hashCode(), INITIAL_ROLES.size());
+            assigned = INITIAL_ROLES.get(index);
+        }
         data.putString(ROLE_KEY, assigned.id());
         data.putLong(ROLE_ASSIGNED_AT_KEY, villager.level().getGameTime());
         // A one-time, in-world cue makes the otherwise hidden builder assignment testable.
@@ -69,6 +73,29 @@ public final class VillageRoleService {
         return Role.fromId(villager.getPersistentData().getString(ROLE_KEY));
     }
 
+    /**
+     * Small founding groups need useful starter roles, not a UUID lottery that can assign
+     * both founders as guards or scouts. Only loaded nearby residents are considered.
+     */
+    private static Role chooseFoundingRole(Villager villager) {
+        if (!(villager.level() instanceof ServerLevel level)) return null;
+        var nearby = level.getEntitiesOfClass(Villager.class,
+                new AABB(villager.blockPosition()).inflate(24.0D),
+                other -> other != villager && other.isAlive() && !other.isBaby()
+                        && VillageRoleService.roleOf(other) != null);
+        if (nearby.isEmpty()) return Role.FARMER;
+        if (nearby.size() == 1) {
+            Role other = roleOf(nearby.get(0));
+            if (other == Role.FARMER) return Role.GATHERER;
+            if (other == Role.GATHERER) return Role.FARMER;
+            return Role.GATHERER;
+        }
+        if (nearby.size() == 2) {
+            boolean hasBuilder = nearby.stream().anyMatch(other -> roleOf(other) == Role.BUILDER);
+            if (!hasBuilder) return Role.BUILDER;
+        }
+        return null;
+    }
     /** Reuse Minecraft professions for smith work instead of inventing a duplicate social role. */
     public static boolean isVanillaSmith(Villager villager) {
         var profession = villager.getVillagerData().getProfession();
