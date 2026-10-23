@@ -29,6 +29,8 @@ public final class VillageAutonomyService {
             villager.goalSelector.addGoal(2, new VillageGuardCombatGoal(villager));
             // Real construction may preempt farming, but urgent vanilla behaviors retain priority.
             villager.goalSelector.addGoal(6, new VillageEquipmentGoal(villager));
+            // Founding residents turn real carried logs into planks and then a crafting table.
+            villager.goalSelector.addGoal(7, new VillageBootstrapCraftingGoal(villager));
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
             // Lumberjacks turn naturally grown trees into real stored building material.
             villager.goalSelector.addGoal(8, new VillageLumberjackGoal(villager));
