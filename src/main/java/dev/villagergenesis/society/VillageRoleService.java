@@ -7,9 +7,8 @@ import net.minecraft.core.particles.ParticleTypes;
 import java.util.List;
 
 /**
- * Gives each villager a persistent Villager Genesis social role independent of its vanilla
- * profession. This is a stable identity seed, not the settlement-wide staffing allocator yet:
- * later census/planning passes may propose reassignment when real village needs are available.
+ * Gives each villager a persistent Villager Genesis social role independent of vanilla profession.
+ * Role assignment is deterministic and stable; it is not yet a dynamic staffing allocator.
  */
 public final class VillageRoleService {
     public static final String ROLE_KEY = "villager_genesis_role";
@@ -20,6 +19,10 @@ public final class VillageRoleService {
         BUILDER("builder"),
         GATHERER("gatherer"),
         CRAFTER("crafter"),
+        MINER("miner"),
+        LUMBERJACK("lumberjack"),
+        BLACKSMITH("blacksmith"),
+        MAYOR("mayor"),
         GUARD("guard"),
         SCOUT("scout"),
         CARETAKER("caretaker");
@@ -36,7 +39,8 @@ public final class VillageRoleService {
 
     private static final List<Role> INITIAL_ROLES = List.of(
             Role.FARMER, Role.FARMER, Role.BUILDER, Role.GATHERER,
-            Role.GATHERER, Role.CRAFTER, Role.GUARD, Role.SCOUT, Role.CARETAKER
+            Role.GATHERER, Role.CRAFTER, Role.MINER, Role.LUMBERJACK,
+            Role.BLACKSMITH, Role.MAYOR, Role.GUARD, Role.SCOUT, Role.CARETAKER
     );
 
     private VillageRoleService() {}
