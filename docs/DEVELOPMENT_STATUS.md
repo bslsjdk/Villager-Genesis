@@ -105,6 +105,13 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - This provides a real wood acquisition path for later storage/shelter construction, but it does not yet guarantee the lumberjack is staffed when a new group has no saved role policy, or provide a container-free starter phase. Group-based staffing and resource surveying remain pending.
 
 
+## Founding wood bootstrap (source committed; CI/gameplay pending)
+
+- Commit 06d60dea4ecb5d8a32e74ad4100cca9cdeaeb87d changes the lumberjack goal so FARMER and GATHERER residents can perform the first bounded wood-gathering task instead of requiring a pre-existing specialist or learned flag.
+- If no public container has a free slot, the goal can place the exact game-computed log drop into a fitting slot in the villager's own real inventory. It checks capacity before breaking the log and still destroys without duplicate world drops.
+- This removes one circular dependency (no chest -> no wood), but it does NOT yet craft planks or a crafting table, equip tools, or make farmer role equivalent to being able to farm. Those are the next required stages.
+- The starter goal still uses conservative tree heuristics and needs a compile/CI check plus in-game testing. Do not call the full bootstrap economy complete until the chain is wired end-to-end: log -> planks -> crafting table -> tools -> tool-gated work.
+
 ## Hunting and animal husbandry (role foundation committed; behaviors pending)
 
 - Added persistent social-role identifiers `HUNTER` and `HERDER` to `VillageRoleService` and included them in the deterministic initial-role pool. Existing valid saved role IDs remain unchanged.
