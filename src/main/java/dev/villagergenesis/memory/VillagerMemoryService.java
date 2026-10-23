@@ -47,20 +47,25 @@ public final class VillagerMemoryService {
         // from the executor-owned active-goal key, and always re-evaluate on scheduled observations
         // so an old "explore" goal cannot suppress an urgent retreat recommendation.
         String activeGoal = villager.getPersistentData().getString("villager_genesis_current_goal");
-        GoalPlanner.rankGoals(memory.snapshot(activeGoal), context, outcomeFeedback(memory)).stream()
+        GoalPlanner.rankGoals(memory.snapshot(activeGoal), context, outcomeFeedback(memory, gameTime)).stream()
                 .findFirst().ifPresent(candidate ->
                         memory.recordSuggestion(candidate.goal(), candidate.score(), candidate.reason(), gameTime));
         VillageKnowledgeSharingService.tryTeachOne(villager);
     }
 
-    private static List<GoalPlanner.Feedback> outcomeFeedback(VillagerMemory memory) {
+    private static List<GoalPlanner.Feedback> outcomeFeedback(VillagerMemory memory, long gameTime) {
         List<GoalPlanner.Feedback> feedback = new ArrayList<>();
         String[] goals = {
                 "retreat", "seek_food", "seek_shelter", "learn",
                 "cooperate", "explore", "observe", "initialize"
         };
         for (String goal : goals) {
-            String lastResult = goal.equals(memory.lastActionGoal()) ? memory.lastActionResult() : "";
+            // The persistent aggregate counters are long-lived; the extra recency bonus/penalty
+            // must expire or a single old event would influence every future planning cycle.
+            long actionAge = gameTime - memory.lastActionAt();
+            boolean recent = actionAge >= 0 && actionAge <= 1_200;
+            String lastResult = recent && goal.equals(memory.lastActionGoal())
+                    ? memory.lastActionResult() : "";
             feedback.add(new GoalPlanner.Feedback(goal,
                     memory.actionSuccessesFor(goal),
                     memory.actionFailuresFor(goal),
