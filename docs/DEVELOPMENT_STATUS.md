@@ -54,6 +54,10 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - New membership primitive: `SettlementMembershipIndex` (commit e9386dd46d4117ec2f5237cd776dbf08031067e9; result semantics clarified in e135db699cf5d76f1b63422fe9fb9bb5566e3765) provides immutable resident-to-settlement mapping, conflict-safe first claims, and compare-and-set transfers. Its unit tests were added in d52b72bae85b3bd07352fe4da77278a624a285e1.
 - Important limitation: this membership index is currently a pure domain primitive. It is not yet connected to Minecraft entity persistent data, world SavedData, settlement discovery, or live roster surveying. Do not count it as runtime membership integration until those adapters exist and are tested.
 
+
+- Bottom-up formation: `SettlementEmergenceModel` was added in commit c0248e8554ea8ca78a1556a3fff16d05db5a3770, with tests in c810c70f83feb5144dc9bcfe8053771ec215d35b. It models repeated evidence for WANDERING_GROUP -> GATHERING -> CAMP -> VILLAGE and never skips a stage. This is still a pure model, not live entity grouping, persistence, task execution, or construction.
+- Architectural priority: villagers must be able to form stable local groups without waiting for abstract terrain-node discovery to find a pre-existing village. Next work is a bounded loaded-villager group tracker, persisted emergence state, and real-item shared tasks.
+
 ## Unfinished work that must not be forgotten
 1. Re-check CI for the latest resident-escape commit and fix any compile/test failures.
 2. In-game test escape destination selection, navigation, fleeing from a monster, and goal interruption alongside vanilla behavior.
