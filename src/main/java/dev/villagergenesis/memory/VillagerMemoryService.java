@@ -17,7 +17,7 @@ public final class VillagerMemoryService {
 
     public static void onEntityTickPost(EntityTickEvent.Post event) {
         Entity entity = event.getEntity();
-        if (!(entity instanceof Villager villager) || villager.level().isClientSide()) {
+        if (!(entity instanceof Villager villager) || villager.level().isClientSide) {
             return;
         }
 
