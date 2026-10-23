@@ -1,6 +1,6 @@
 # Development Status: Settlement Autonomy
 
-Last updated: 2026-10-23
+Last updated: 2026-10-24
 Repository: https://github.com/bslsjdk/Villager-Genesis
 Working branch: feat/settlement-resource-jobs
 Minecraft: Java 1.21.1, NeoForge 21.1.264
@@ -95,10 +95,21 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - The stage-model CI failure was traced to the progression test restarting its simulated timestamp at an earlier value between helper calls. The test now keeps the simulated game clock monotonic. The updated Actions run must still pass before this is called CI-verified.
 
 
-## Real wood supply (new; CI pending)
+## Real wood supply (source committed; latest relevant build passed)
 
 - Registered `VillageLumberjackGoal` for the existing persistent LUMBERJACK role. A GATHERER can also learn `wood_harvesting` after a successful task, enabling later skill sharing/role adaptation.
 - The goal looks only in a small radius of already-loaded terrain, checks for logs connected vertically and nearby leaves, rejects obvious structure markers and nearby block entities, and harvests one trunk block per trip.
 - It requires an existing nearby container with an empty slot. It calculates the block's real drops, breaks the block without spawning duplicate drops, then stores the computed item stack. No wood is fabricated and no chunk is requested.
 - Safety limitation: tree-vs-player-build detection is heuristic, not a perfect ownership system. The current implementation is intentionally conservative and only cuts one log per trip; it needs in-game testing around player-built log structures and different tree types before broadening the harvest rules.
+- GitHub Actions run for commit `b2710e49` completed successfully. This verifies that commit's CI only; it does not verify gameplay.
 - This provides a real wood acquisition path for later storage/shelter construction, but it does not yet guarantee the lumberjack is staffed when a new group has no saved role policy, or provide a container-free starter phase. Group-based staffing and resource surveying remain pending.
+
+
+## Hunting and animal husbandry (role foundation committed; behaviors pending)
+
+- Added persistent social-role identifiers `HUNTER` and `HERDER` to `VillageRoleService` and included them in the deterministic initial-role pool. Existing valid saved role IDs remain unchanged.
+- These role identifiers are not executable behavior. No hunting, animal luring, pen construction, breeding, feeding, or animal-product collection is claimed implemented yet.
+- Next: implement a bounded survey of nearby animals using only loaded entities; distinguish wild/nearby animals from animals already in pens; plan food acquisition from actual conditions; and make herding use real vanilla breeding foods and existing animals rather than creating animals or drops.
+- Hunting must be conservative and outcome-driven, avoid exhausting nearby wildlife, and use real drops/inventory. Do not add hostile-mob combat behavior as a shortcut for hunting.
+- Husbandry must not break player builds, place fences without real materials, teleport animals, or load chunks. Pen safety and ownership detection need explicit checks; uncertain player-built enclosures must be left alone.
+- Role assignment is currently UUID-based and not settlement-scoped, so the next step must connect these roles to local group staffing without assigning every nearby villager the same job.
