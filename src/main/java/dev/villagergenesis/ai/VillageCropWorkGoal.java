@@ -135,6 +135,7 @@ public final class VillageCropWorkGoal extends Goal {
         double plantingDistance = Double.MAX_VALUE;
         BlockPos ripe = null;
         double ripeDistance = Double.MAX_VALUE;
+        boolean blockedRipeCrop = false;
         Container inventory = villager.getInventory();
         boolean hasSeed = seedFor(inventory) != null && managedCropCount() < 24;
 
@@ -150,7 +151,9 @@ public final class VillageCropWorkGoal extends Goal {
                             && isManagedCrop(pos)) {
                         List<ItemStack> drops = Block.getDrops(state, level, pos,
                                 level.getBlockEntity(pos), villager, villager.getMainHandItem());
-                        if (distance < ripeDistance && !drops.isEmpty() && canFitDrops(inventory, drops)) {
+                        if (drops.isEmpty() || !canFitDrops(inventory, drops)) {
+                            blockedRipeCrop = true;
+                        } else if (distance < ripeDistance) {
                             ripe = pos.immutable();
                             ripeDistance = distance;
                         }
@@ -169,6 +172,9 @@ public final class VillageCropWorkGoal extends Goal {
             harvest = true;
             return ripe;
         }
+        // If a tracked crop is ripe but its drops do not fit, stop instead of expanding the
+        // farm and making the inventory pressure worse.
+        if (blockedRipeCrop) return null;
         harvest = false;
         return planting;
     }
