@@ -1,6 +1,7 @@
 package dev.villagergenesis.memory;
 
 import dev.villagergenesis.planning.GoalPlanner;
+import dev.villagergenesis.ai.VillageKnowledgeSharingService;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.Villager;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -30,5 +31,6 @@ public final class VillagerMemoryService {
         VillagerMemory memory = VillagerMemory.forVillager(villager);
         memory.observe(villager);
         GoalPlanner.chooseGoal(memory.snapshot()).ifPresent(memory::setCurrentGoal);
+        VillageKnowledgeSharingService.tryTeachOne(villager);
     }
 }
