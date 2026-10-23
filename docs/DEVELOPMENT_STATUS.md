@@ -48,6 +48,12 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Commits e4bc9516ba8bea6f32198d0b8c62b1f4cb6cbd17 and 3d47189e76cf488fe743d0fd317f8a22b8c55694 add SettlementStaffingPolicy: bounded staffing targets from food reserve, surveyed farm workload, housing shortage, and confirmed storage survey. It explicitly avoids inferring lumberjack/mason shortages when storage survey is incomplete. The policy and staffing planner are pure proposal layers, not yet connected to a live settlement roster. CI for these newest commits must be checked.
 - No guard combat or resident escape behavior has been tested in a running Minecraft world.
 
+
+
+- Latest verified CI at time of update: Build run #317 / 40007102739 completed successfully for commit 09b6ed429201f6802979503986e0abbd7d2b0146. This verifies the source state through the staffing stability documentation commit, not the newer membership-index commits.
+- New membership primitive: `SettlementMembershipIndex` (commit e9386dd46d4117ec2f5237cd776dbf08031067e9; result semantics clarified in e135db699cf5d76f1b63422fe9fb9bb5566e3765) provides immutable resident-to-settlement mapping, conflict-safe first claims, and compare-and-set transfers. Its unit tests were added in d52b72bae85b3bd07352fe4da77278a624a285e1.
+- Important limitation: this membership index is currently a pure domain primitive. It is not yet connected to Minecraft entity persistent data, world SavedData, settlement discovery, or live roster surveying. Do not count it as runtime membership integration until those adapters exist and are tested.
+
 ## Unfinished work that must not be forgotten
 1. Re-check CI for the latest resident-escape commit and fix any compile/test failures.
 2. In-game test escape destination selection, navigation, fleeing from a monster, and goal interruption alongside vanilla behavior.
