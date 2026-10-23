@@ -91,7 +91,6 @@ public final class VillageKnowledgeArchiveService {
 
     private static boolean writeKnowledge(Container container, int slot, ItemStack original,
                                           Set<String> ids) {
-        ItemStack archiveBook = original;
         int destinationSlot = slot;
         if (original.getCount() > 1) {
             destinationSlot = -1;
@@ -103,13 +102,12 @@ public final class VillageKnowledgeArchiveService {
             }
             // Never destroy the remaining book stack to make room for an archive.
             if (destinationSlot < 0) return false;
-            archiveBook = container.removeItem(slot, 1);
-            if (archiveBook.isEmpty()) return false;
-            archiveBook.setCount(1);
+            ItemStack removed = container.removeItem(slot, 1);
+            if (removed.isEmpty()) return false;
         }
 
-        archiveBook.setItem(Items.WRITTEN_BOOK);
-        CompoundTag root = archiveBook.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        ItemStack archiveBook = new ItemStack(Items.WRITTEN_BOOK, 1);
+        CompoundTag root = original.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         CompoundTag archive = root.contains(ARCHIVE_ROOT, Tag.TAG_COMPOUND)
                 ? root.getCompound(ARCHIVE_ROOT) : new CompoundTag();
         ListTag list = new ListTag();
@@ -121,7 +119,7 @@ public final class VillageKnowledgeArchiveService {
         archiveBook.set(DataComponents.CUSTOM_NAME, Component.literal("Village Knowledge Archive"));
 
         var pages = ids.stream().sorted()
-                .map(id -> Filterable.passThrough(Component.literal(formatKnowledgePage(id))))
+                .map(id -> Filterable.<Component>passThrough(Component.literal(formatKnowledgePage(id))))
                 .toList();
         archiveBook.set(DataComponents.WRITTEN_BOOK_CONTENT,
                 new WrittenBookContent(Filterable.passThrough("Village Knowledge"),
