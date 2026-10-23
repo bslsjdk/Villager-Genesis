@@ -170,3 +170,10 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Stick crafting is a separate goal pass: two real planks are consumed to produce four sticks, then a later pass crafts the tool. Tool crafting currently supports the wooden starter tier only; stone/iron upgrades, recipe-registry integration, crop-task tool gating, and settlement-wide resource reservations remain unfinished.
 - Runtime behavior and compilation are not yet confirmed by in-game testing. Treat this as implementation committed to the feature branch, not as a verified end-to-end bootstrap economy. Check GitHub Actions and then test a clean world with two newly spawned villagers.
 
+## Tool-gated starter farmland (2026-10-24)
+
+- Added and registered `VillageFarmlandPreparationGoal`. Only FARMER residents holding a usable hoe can convert existing dirt/grass into farmland; a water block must be nearby, the target and surrounding checks must remain in loaded chunks, and obvious beds/doors/workstations/storage/path blocks are protected.
+- Each successful till consumes durability from the real equipped hoe and records the outcome in villager memory. It creates farmland only; it does not generate seeds, crops, water, or tools. Crop planting and harvesting remain separate behavior that must be tested against the vanilla farmer AI.
+- Negative candidate scans are throttled to avoid repeating bounded terrain scans every AI tick. The search is intentionally local and does not load chunks.
+- CI is the next gate. Even if compilation passes, the full founding sequence (wood -> planks -> table -> sticks/tool -> farmland -> seed/crop cycle) still requires a clean-world in-game test. Bed production/placement and animal husbandry remain incomplete.
+
