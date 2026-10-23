@@ -2,6 +2,7 @@ package dev.villagergenesis.memory;
 
 import dev.villagergenesis.planning.GoalPlanner;
 import dev.villagergenesis.ai.VillageKnowledgeSharingService;
+import dev.villagergenesis.society.VillageRoleService;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.Villager;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -33,6 +34,9 @@ public final class VillagerMemoryService {
 
         VillagerMemory memory = VillagerMemory.forVillager(villager);
         memory.observe(villager);
+        // Social identity belongs to Villager Genesis, not to the vanilla profession/job-site system.
+        // Assign once and preserve it across ticks and saves; settlement-wide reassignment comes later.
+        VillageRoleService.ensureRole(villager);
 
         // Use only cheap facts already available on the entity. Do not scan nearby chunks/entities
         // just to make a decision; richer threat/food/shelter observations can be injected later.
