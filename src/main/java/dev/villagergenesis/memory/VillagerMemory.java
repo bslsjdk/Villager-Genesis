@@ -1,7 +1,7 @@
 package dev.villagergenesis.memory;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.core.BlockPos;
 
@@ -35,7 +35,7 @@ public final class VillagerMemory {
     public static VillagerMemory forVillager(Villager villager) {
         CompoundTag entityData = villager.getPersistentData();
         CompoundTag memory;
-        if (entityData.contains(ROOT, CompoundTag.TAG_COMPOUND)) {
+        if (entityData.contains(ROOT, Tag.TAG_COMPOUND)) {
             memory = entityData.getCompound(ROOT);
         } else {
             memory = new CompoundTag();
