@@ -19,7 +19,9 @@ import java.util.WeakHashMap;
  */
 public final class VillageKnowledgeSharingService {
     private static final String NEXT_TEACHING = "villager_genesis_next_teaching";
+    private static final String GENIUS_TRAIT = "villager_genesis_genius";
     private static final int TEACHING_COOLDOWN = 200;
+    private static final int GENIUS_TEACHING_COOLDOWN = 100;
     private static final int ARCHIVE_SCAN_INTERVAL = 40;
     private static final Map<ServerLevel, Map<Long, Long>> NEXT_REGION_SCAN =
             Collections.synchronizedMap(new WeakHashMap<>());
@@ -43,6 +45,7 @@ public final class VillageKnowledgeSharingService {
         }
 
         var sourceMemory = VillagerMemory.forVillager(teacher);
+        boolean genius = isGenius(teacher);
 
         // A physical book can outlive its author. Villagers can recover archived knowledge
         // before teaching, so knowledge does not disappear with one particular resident.
@@ -51,11 +54,12 @@ public final class VillageKnowledgeSharingService {
         int bookSearchRadius = librarian ? 16 : 8;
         var archivedKnowledge = VillageKnowledgeArchiveService.listArchivedKnowledge(
                 level, teacher.blockPosition(), bookSearchRadius);
-        String archived = archivedKnowledge.stream()
+        var unknownArchived = archivedKnowledge.stream()
                 .filter(id -> !sourceMemory.knownKnowledge().contains(id))
                 .sorted()
-                .findFirst().orElse(null);
-        if (archived != null) {
+                .limit(genius ? 3 : 1)
+                .toList();
+        for (String archived : unknownArchived) {
             sourceMemory.learnKnowledge(archived);
         }
 
@@ -87,7 +91,7 @@ public final class VillageKnowledgeSharingService {
         if (student == null || teachable == null) return;
 
         teacher.getPersistentData().putLong(NEXT_TEACHING,
-                level.getGameTime() + TEACHING_COOLDOWN);
+                level.getGameTime() + (genius ? GENIUS_TEACHING_COOLDOWN : TEACHING_COOLDOWN));
 
         // Archive knowledge in physical books when available; teaching also works without books.
         String archiveCandidate = known.stream()
@@ -100,6 +104,20 @@ public final class VillageKnowledgeSharingService {
 
         VillagerMemory.forVillager(student).learnKnowledge(teachable);
         student.getPersistentData().putLong(NEXT_TEACHING,
-                level.getGameTime() + TEACHING_COOLDOWN);
+                level.getGameTime() + (isGenius(student)
+                        ? GENIUS_TEACHING_COOLDOWN : TEACHING_COOLDOWN));
+    }
+
+    /**
+     * A small, stable minority can become natural prodigies regardless of profession.
+     * The UUID-based trait survives reloads and does not replace practice or prerequisites.
+     */
+    public static boolean isGenius(Villager villager) {
+        var data = villager.getPersistentData();
+        if (!data.contains(GENIUS_TRAIT)) {
+            data.putBoolean(GENIUS_TRAIT,
+                    Math.floorMod(villager.getUUID().hashCode(), 32) == 0);
+        }
+        return data.getBoolean(GENIUS_TRAIT);
     }
 }
