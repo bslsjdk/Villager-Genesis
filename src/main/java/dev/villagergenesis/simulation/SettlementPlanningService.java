@@ -18,6 +18,8 @@ public final class SettlementPlanningService {
             return true;
         }
         SettlementPlanningEngine.Plan plan=SettlementPlanningEngine.plan(node,graph.edges());
+        node.setPlanningRole(plan.role().name());
+        graph.markChanged();
         queue.completePlan(taskId,plan.role().name(),plan.reason(),gameTime);
         return true;
     }
