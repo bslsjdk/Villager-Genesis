@@ -25,7 +25,8 @@ public final class VillageAutonomyService {
             VillageRoleService.ensureRole(villager);
             // Real construction may preempt farming, but urgent vanilla behaviors retain priority.
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
-            villager.goalSelector.addGoal(8, new VillageFarmWorkGoal(villager));
+            // The shelter is a mod-owned construction behavior, not a duplicate of vanilla farming.
+            villager.goalSelector.addGoal(8, new VillageShelterConstructionGoal(villager));
             villager.goalSelector.addGoal(9, new VillageExplorationGoal(villager));
             INSTALLED.put(villager, Boolean.TRUE);
         }
