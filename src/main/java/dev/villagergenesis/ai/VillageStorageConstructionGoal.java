@@ -27,7 +27,7 @@ import java.util.WeakHashMap;
  * This deliberately does not break blocks, move player structures, or synthesize materials.
  */
 public final class VillageStorageConstructionGoal extends Goal {
-    private static final Map<ServerLevel, Long> NEXT_SETTLEMENT_SCAN =
+    private static final Map<ServerLevel, Map<Long, Long>> NEXT_SETTLEMENT_SCAN =
             Collections.synchronizedMap(new WeakHashMap<>());
     private static final int SCAN_INTERVAL = 100;
     private static final int RETRY_AFTER_BUILD = 1_200;
@@ -53,9 +53,13 @@ public final class VillageStorageConstructionGoal extends Goal {
                 || !villager.getNavigation().isDone()) return false;
 
         long now = level.getGameTime();
+        long regionKey = (((long) (villager.blockPosition().getX() >> 5)) << 32)
+                ^ ((villager.blockPosition().getZ() >> 5) & 0xffffffffL);
         synchronized (NEXT_SETTLEMENT_SCAN) {
-            if (now < NEXT_SETTLEMENT_SCAN.getOrDefault(level, 0L)) return false;
-            NEXT_SETTLEMENT_SCAN.put(level, now + SCAN_INTERVAL);
+            Map<Long, Long> regions = NEXT_SETTLEMENT_SCAN.computeIfAbsent(level,
+                    ignored -> new java.util.HashMap<>());
+            if (now < regions.getOrDefault(regionKey, 0L)) return false;
+            regions.put(regionKey, now + SCAN_INTERVAL);
         }
 
         VisibleStorageScanner.Snapshot snapshot;
@@ -83,7 +87,8 @@ public final class VillageStorageConstructionGoal extends Goal {
             return false;
         }
         synchronized (NEXT_SETTLEMENT_SCAN) {
-            NEXT_SETTLEMENT_SCAN.put(level, now + RETRY_AFTER_BUILD);
+            NEXT_SETTLEMENT_SCAN.getOrDefault(level, java.util.Map.of())
+                    .put(regionKey, now + RETRY_AFTER_BUILD);
         }
         return true;
     }
