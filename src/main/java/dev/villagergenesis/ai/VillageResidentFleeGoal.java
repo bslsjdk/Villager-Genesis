@@ -77,7 +77,8 @@ public final class VillageResidentFleeGoal extends Goal {
     public void tick() {
         travelTicks++;
         if (!(villager.level() instanceof ServerLevel level) || threat == null || !threat.isAlive()) {
-            escaped = true;
+            // Losing sight of a threat is not proof that the villager successfully escaped.
+            // stop() will record an interruption unless a safe distance was actually reached.
             return;
         }
 
@@ -101,8 +102,7 @@ public final class VillageResidentFleeGoal extends Goal {
         villager.getNavigation().stop();
         if (villager.level() instanceof ServerLevel level) {
             VillagerMemory memory = VillagerMemory.forVillager(villager);
-            if (escaped || (threat != null && (!threat.isAlive()
-                    || villager.distanceToSqr(threat) >= ESCAPE_DISTANCE_SQR))) {
+            if (escaped || (threat != null && villager.distanceToSqr(threat) >= ESCAPE_DISTANCE_SQR)) {
                 memory.recordActionOutcome("flee_threat", "success",
                         "Reached a safer distance from a nearby hostile mob.", level.getGameTime());
                 memory.learnKnowledge("hostile_awareness");
