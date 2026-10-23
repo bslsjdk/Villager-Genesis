@@ -55,6 +55,22 @@ public final class VisibleStorageScanner {
                     + count(Resource.POTATOES) + count(Resource.BEETROOT);
         }
 
+        /** Largest same-colour wool stock, matching vanilla bed recipe requirements. */
+        public int compatibleWoolItems() {
+            return Math.max(Math.max(Math.max(count(Resource.WOOL_WHITE), count(Resource.WOOL_ORANGE)),
+                            Math.max(count(Resource.WOOL_MAGENTA), count(Resource.WOOL_LIGHT_BLUE))),
+                    Math.max(Math.max(Math.max(count(Resource.WOOL_YELLOW), count(Resource.WOOL_LIME)),
+                                    Math.max(count(Resource.WOOL_PINK), count(Resource.WOOL_GRAY))),
+                            Math.max(Math.max(Math.max(count(Resource.WOOL_LIGHT_GRAY), count(Resource.WOOL_CYAN)),
+                                            Math.max(count(Resource.WOOL_PURPLE), count(Resource.WOOL_BLUE))),
+                                    Math.max(Math.max(count(Resource.WOOL_BROWN), count(Resource.WOOL_GREEN)),
+                                            Math.max(count(Resource.WOOL_RED), count(Resource.WOOL_BLACK))))));
+        }
+
+        public int availablePlanks() { return count(Resource.PLANKS); }
+
+        public int availableBeds() { return count(Resource.BEDS); }
+
         public int publicContainerCount() { return containers.size(); }
     }
 
