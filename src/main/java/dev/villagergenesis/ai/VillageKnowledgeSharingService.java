@@ -46,8 +46,11 @@ public final class VillageKnowledgeSharingService {
 
         // A physical book can outlive its author. Villagers can recover archived knowledge
         // before teaching, so knowledge does not disappear with one particular resident.
+        boolean librarian = teacher.getVillagerData().getProfession()
+                == net.minecraft.world.entity.npc.VillagerProfession.LIBRARIAN;
+        int bookSearchRadius = librarian ? 16 : 8;
         var archivedKnowledge = VillageKnowledgeArchiveService.listArchivedKnowledge(
-                level, teacher.blockPosition());
+                level, teacher.blockPosition(), bookSearchRadius);
         String archived = archivedKnowledge.stream()
                 .filter(id -> !sourceMemory.knownKnowledge().contains(id))
                 .sorted()
