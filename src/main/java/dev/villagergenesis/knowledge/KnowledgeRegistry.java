@@ -18,6 +18,9 @@ public final class KnowledgeRegistry {
                 "Use and replace common tools for gathering and farming.", Set.of(), 75, 10));
         register(new KnowledgeDefinition("basic_crafting", "Basic crafting",
                 "Craft common items from available materials.", Set.of("basic_tools"), 72, 12));
+        register(new KnowledgeDefinition("workbench_crafting", "Workbench crafting",
+                "Select a valid recipe, verify ingredients, use a crafting table, and confirm the output before recording success.",
+                Set.of("basic_crafting"), 78, 18));
         register(new KnowledgeDefinition("basic_food_production", "Food production",
                 "Plant, tend, harvest, and replant food crops.", Set.of("basic_tools"), 95, 12));
         register(new KnowledgeDefinition("basic_equipment", "Basic equipment",
