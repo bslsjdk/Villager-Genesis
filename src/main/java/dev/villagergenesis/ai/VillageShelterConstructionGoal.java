@@ -49,7 +49,7 @@ public final class VillageShelterConstructionGoal extends Goal {
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
                 || !villager.getNavigation().isDone()
-                || VillageRoleService.roleOf(villager) != VillageRoleService.Role.BUILDER
+                || !canConstructShelter(VillageRoleService.roleOf(villager))
                 || level.getGameTime() < villager.getPersistentData().getLong("villager_genesis_next_shelter")) {
             return false;
         }
@@ -233,6 +233,10 @@ public final class VillageShelterConstructionGoal extends Goal {
         VillagerMemory.forVillager(villager).recordActionOutcome("build_shelter", "success",
                 "Built a 3x3 oak shelter from 33 real planks taken from village storage.", level.getGameTime());
         VillagerMemory.forVillager(villager).learnKnowledge("shelter_construction");
+    }
+
+    private boolean canConstructShelter(VillageRoleService.Role role) {
+        return role == VillageRoleService.Role.BUILDER || role == VillageRoleService.Role.MASON;
     }
 
     private boolean hasNearbyRegisteredShelter(ServerLevel level, BlockPos origin) {
