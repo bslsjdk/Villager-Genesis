@@ -169,8 +169,13 @@ public final class SettlementNodeGraph extends SavedData {
         Edge edge = edges.get(key);
         if (edge == null) {
             int tension = distance < 256 ? 35 : 0;
-            Relation relation = distance < 256 ? Relation.TENSION : Relation.NEUTRAL;
-            edge = new Edge(first, second, distance, relation, 0, tension, time);
+            int complement = Math.abs(a.foodPotential() - b.foodPotential())
+                    + Math.abs(a.timberPotential() - b.timberPotential())
+                    + Math.abs(a.stonePotential() - b.stonePotential());
+            int trade = Math.min(100, complement / 3);
+            Relation relation = distance < 256 ? Relation.TENSION
+                    : trade >= 35 ? Relation.TRADE : Relation.NEUTRAL;
+            edge = new Edge(first, second, distance, relation, trade, tension, time);
             edges.put(key, edge);
             setDirty();
         }
