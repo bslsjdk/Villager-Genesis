@@ -1,6 +1,7 @@
 package dev.villagergenesis.ai;
 
 import dev.villagergenesis.society.VillageRoleService;
+import dev.villagergenesis.memory.VillagerMemory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -90,9 +91,24 @@ public final class VillageFarmWorkGoal extends Goal {
         travelTicks++;
         if (target == null || !(villager.level() instanceof ServerLevel level)) return;
         if (villager.blockPosition().distSqr(target) <= 4.0D) {
-            harvestAndReplant(level);
+            int outcome = harvestAndReplant(level);
+            long now = level.getGameTime();
+            if (outcome > 0) {
+                VillagerMemory memory = VillagerMemory.forVillager(villager);
+                memory.recordActionOutcome("farm_work", "success",
+                        outcome == 2 ? "Harvested a mature crop and replanted it with carried inventory."
+                                : "Harvested a mature crop; replanting could not be completed.",
+                        now);
+                memory.learnKnowledge("crop_harvesting");
+                if (outcome == 2) memory.learnKnowledge("crop_farming");
+                level.sendParticles(ParticleTypes.HAPPY_VILLAGER, villager.getX(),
+                        villager.getY() + 1.0D, villager.getZ(), 6, 0.25D, 0.25D, 0.25D, 0.01D);
+            } else {
+                VillagerMemory.forVillager(villager).recordActionOutcome("farm_work", "failure",
+                        "The crop or required carried seed changed before execution.", now);
+            }
             villager.getPersistentData().putLong("villager_genesis_next_farm_work",
-                    level.getGameTime() + COOLDOWN_TICKS);
+                    now + COOLDOWN_TICKS);
             target = null;
         } else if (villager.getNavigation().isDone() && travelTicks % 40 == 0) {
             villager.getNavigation().moveTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D, 0.8D);
@@ -117,17 +133,17 @@ public final class VillageFarmWorkGoal extends Goal {
         if (target == null || !level.hasChunkAt(target) || !level.hasChunkAt(target.below())) return;
         BlockState state = level.getBlockState(target);
         if (!(state.getBlock() instanceof CropBlock crop) || !crop.isMaxAge(state)
-                || !level.getBlockState(target.below()).is(Blocks.FARMLAND)) return;
+                || !level.getBlockState(target.below()).is(Blocks.FARMLAND)) return 0;
 
         Item seed = seedFor(state.getBlock());
         int seedSlot = seed == null ? -1 : findSeedSlot(seed);
-        if (seedSlot < 0) return;
+        if (seedSlot < 0) return 0;
 
         // Revalidate immediately before mutation. Normal Minecraft loot produces the harvest;
         // only an item already carried by the villager pays for replanting.
-        if (!level.destroyBlock(target, true, villager)) return;
+        if (!level.destroyBlock(target, true, villager)) return 0;
         ItemStack carriedSeed = villager.getInventory().getItem(seedSlot);
-        if (carriedSeed.isEmpty() || !carriedSeed.is(seed)) return;
+        if (carriedSeed.isEmpty() || !carriedSeed.is(seed)) return 1;
         carriedSeed.shrink(1);
         if (carriedSeed.isEmpty()) villager.getInventory().setItem(seedSlot, ItemStack.EMPTY);
         if (level.getBlockState(target).isAir()
