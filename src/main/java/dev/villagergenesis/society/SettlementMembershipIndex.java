@@ -17,6 +17,7 @@ import java.util.UUID;
 public final class SettlementMembershipIndex {
     public enum ClaimResult {
         ADDED,
+        TRANSFERRED,
         ALREADY_MEMBER,
         CONFLICT
     }
@@ -90,7 +91,7 @@ public final class SettlementMembershipIndex {
         }
         Map<UUID, UUID> updated = new LinkedHashMap<>(settlementByResident);
         updated.put(residentId, newSettlementId);
-        return new Claim(new SettlementMembershipIndex(updated), ClaimResult.ADDED);
+        return new Claim(new SettlementMembershipIndex(updated), ClaimResult.TRANSFERRED);
     }
 
     public record Claim(SettlementMembershipIndex index, ClaimResult result) {
