@@ -11,7 +11,7 @@ public final class SettlementPlanningService {
         SettlementTaskQueue.Task task=queue.peekPending();
         if(task==null) return false;
         UUID taskId=task.id();
-        queue.update(taskId,SettlementTaskQueue.Status.IN_PROGRESS,10,gameTime);
+        if (!queue.claimForProcessing(taskId, gameTime)) return false;
         SettlementNodeGraph.Node node=graph.node(task.nodeId());
         if(node==null) {
             queue.update(taskId,SettlementTaskQueue.Status.FAILED,100,gameTime);
