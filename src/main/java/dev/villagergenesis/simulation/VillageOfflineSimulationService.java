@@ -42,6 +42,7 @@ public final class VillageOfflineSimulationService {
         }
 
         SettlementNodeGraph graph = SettlementNodeGraph.get(level);
+        SettlementTaskQueue queue = SettlementTaskQueue.get(level);
         seedOneCandidate(level, graph, now);
         if (!graph.nodes().isEmpty()) {
             int nodeCount = graph.nodes().size();
@@ -50,6 +51,8 @@ public final class VillageOfflineSimulationService {
             graph.rebuildLocalEdges(adaptiveBudget, GRAPH_NEIGHBOURS, now);
             advanceOneNode(level, graph, now);
         }
+        // Process at most one persistent abstract plan per scheduler step. This is data-only.
+        SettlementPlanningService.processOne(graph, queue, now);
     }
 
     /**
