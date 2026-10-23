@@ -24,6 +24,21 @@ class VillagerMemoryActionOutcomeTest {
     }
 
     @Test
+    void perGoalCountersDoNotMixOutcomesFromDifferentGoals() {
+        CompoundTag saved = new CompoundTag();
+        VillagerMemory memory = new VillagerMemory(saved);
+        memory.recordActionOutcome("explore", "failure", "Path ended.", 100L);
+        memory.recordActionOutcome("observe", "success", "Observation completed.", 200L);
+
+        VillagerMemory restored = new VillagerMemory(saved.copy());
+        assertEquals(1, restored.actionFailuresFor("explore"));
+        assertEquals(0, restored.actionSuccessesFor("explore"));
+        assertEquals(1, restored.actionSuccessesFor("observe"));
+        assertEquals(0, restored.actionFailuresFor("observe"));
+        assertEquals(0, restored.actionInterruptsFor("unknown_goal"));
+    }
+
+    @Test
     void actionOutcomePersistsAndBoundsReason() {
         CompoundTag saved = new CompoundTag();
         VillagerMemory memory = new VillagerMemory(saved);
