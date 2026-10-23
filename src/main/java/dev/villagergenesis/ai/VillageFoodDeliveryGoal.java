@@ -80,16 +80,17 @@ public final class VillageFoodDeliveryGoal extends Goal {
         if (!(entity instanceof Container destination)) return;
         Container inventory = villager.getInventory();
         boolean movedAny = false;
-        for (int sourceSlot = 0; sourceSlot < inventory.getContainerSize(); sourceSlot++) {
+        int remainingTransferable = Math.max(0, countReadyFood(inventory) - PERSONAL_FOOD_RESERVE);
+        for (int sourceSlot = 0; sourceSlot < inventory.getContainerSize() && remainingTransferable > 0; sourceSlot++) {
             ItemStack source = inventory.getItem(sourceSlot);
             if (source.isEmpty() || !isReadyFood(source.getItem())) continue;
-            int reserveStillNeeded = Math.max(0, PERSONAL_FOOD_RESERVE - countReadyFood(inventory));
-            int transferable = Math.max(0, source.getCount() - reserveStillNeeded);
+            int transferable = Math.min(source.getCount(), remainingTransferable);
             if (transferable <= 0) continue;
             ItemStack remainder = insertInto(destination, source.copyWithCount(transferable));
             int moved = source.getCount() - remainder.getCount();
             if (moved <= 0) continue;
             source.shrink(moved);
+            remainingTransferable -= moved;
             if (source.isEmpty()) inventory.setItem(sourceSlot, ItemStack.EMPTY);
             movedAny = true;
         }
