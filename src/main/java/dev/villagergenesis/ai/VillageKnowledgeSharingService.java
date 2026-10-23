@@ -6,6 +6,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.npc.Villager;
 
 import java.util.Comparator;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Lets villagers teach nearby residents and preserve learned knowledge in physical books.
@@ -14,6 +18,9 @@ import java.util.Comparator;
 public final class VillageKnowledgeSharingService {
     private static final String NEXT_TEACHING = "villager_genesis_next_teaching";
     private static final int TEACHING_COOLDOWN = 200;
+    private static final int ARCHIVE_SCAN_INTERVAL = 40;
+    private static final Map<ServerLevel, Map<Long, Long>> NEXT_REGION_SCAN =
+            Collections.synchronizedMap(new WeakHashMap<>());
 
     private VillageKnowledgeSharingService() {}
 
@@ -22,6 +29,15 @@ public final class VillageKnowledgeSharingService {
                 || teacher.isBaby() || teacher.getTarget() != null
                 || level.getGameTime() < teacher.getPersistentData().getLong(NEXT_TEACHING)) {
             return;
+        }
+
+        long regionKey = (((long) (teacher.blockPosition().getX() >> 5)) << 32)
+                ^ ((teacher.blockPosition().getZ() >> 5) & 0xffffffffL);
+        synchronized (NEXT_REGION_SCAN) {
+            Map<Long, Long> regions = NEXT_REGION_SCAN.computeIfAbsent(level,
+                    ignored -> new HashMap<>());
+            if (level.getGameTime() < regions.getOrDefault(regionKey, 0L)) return;
+            regions.put(regionKey, level.getGameTime() + ARCHIVE_SCAN_INTERVAL);
         }
 
         var sourceMemory = VillagerMemory.forVillager(teacher);
