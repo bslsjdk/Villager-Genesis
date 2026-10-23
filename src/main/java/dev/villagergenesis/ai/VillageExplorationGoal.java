@@ -28,7 +28,7 @@ public final class VillageExplorationGoal extends Goal {
 
     public VillageExplorationGoal(Villager villager) {
         this.villager = villager;
-        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
