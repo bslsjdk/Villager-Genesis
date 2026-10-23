@@ -27,6 +27,8 @@ public final class VillageFoodDeliveryGoal extends Goal {
     private static final String NEXT_TRY = "villager_genesis_next_food_delivery";
     private static final int COOLDOWN_TICKS = 400;
     private static final int SEARCH_RADIUS = 6;
+    // Keep a small personal reserve so delivery does not empty a resident's entire food supply.
+    private static final int PERSONAL_FOOD_RESERVE = 2;
     private final Villager villager;
     private BlockPos target;
     private int travelTicks;
@@ -81,7 +83,10 @@ public final class VillageFoodDeliveryGoal extends Goal {
         for (int sourceSlot = 0; sourceSlot < inventory.getContainerSize(); sourceSlot++) {
             ItemStack source = inventory.getItem(sourceSlot);
             if (source.isEmpty() || !isReadyFood(source.getItem())) continue;
-            ItemStack remainder = insertInto(destination, source.copy());
+            int reserveStillNeeded = Math.max(0, PERSONAL_FOOD_RESERVE - countReadyFood(inventory));
+            int transferable = Math.max(0, source.getCount() - reserveStillNeeded);
+            if (transferable <= 0) continue;
+            ItemStack remainder = insertInto(destination, source.copyWithCount(transferable));
             int moved = source.getCount() - remainder.getCount();
             if (moved <= 0) continue;
             source.shrink(moved);
@@ -148,16 +153,21 @@ public final class VillageFoodDeliveryGoal extends Goal {
     }
 
     private boolean canAcceptFood(Container destination, Container inventory) {
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
+        int totalFood = countReadyFood(inventory);
+        int transferableTotal = Math.max(0, totalFood - PERSONAL_FOOD_RESERVE);
+        if (transferableTotal <= 0) return false;
+        for (int i = 0; i < inventory.getContainerSize() && transferableTotal > 0; i++) {
             ItemStack source = inventory.getItem(i);
             if (source.isEmpty() || !isReadyFood(source.getItem())) continue;
-            ItemStack remaining = source.copy();
+            int transferable = Math.min(source.getCount(), transferableTotal);
+            ItemStack remaining = source.copyWithCount(transferable);
             for (int j = 0; j < destination.getContainerSize() && !remaining.isEmpty(); j++) {
                 ItemStack slot = destination.getItem(j);
                 if (slot.isEmpty()) return true;
                 if (ItemStack.isSameItemSameComponents(slot, remaining)
                         && slot.getCount() < Math.min(slot.getMaxStackSize(), destination.getMaxStackSize())) return true;
             }
+            transferableTotal -= transferable;
         }
         return false;
     }
@@ -182,11 +192,16 @@ public final class VillageFoodDeliveryGoal extends Goal {
     }
 
     private boolean hasReadyFood(Container inventory) {
+        return countReadyFood(inventory) > PERSONAL_FOOD_RESERVE;
+    }
+
+    private int countReadyFood(Container inventory) {
+        int total = 0;
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack stack = inventory.getItem(i);
-            if (!stack.isEmpty() && isReadyFood(stack.getItem())) return true;
+            if (!stack.isEmpty() && isReadyFood(stack.getItem())) total += stack.getCount();
         }
-        return false;
+        return total;
     }
 
     private boolean isReadyFood(Item item) {
