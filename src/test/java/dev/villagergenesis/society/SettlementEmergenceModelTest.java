@@ -119,7 +119,9 @@ class SettlementEmergenceModelTest {
             SettlementEmergenceModel.Survey survey,
             long startTime,
             SettlementEmergenceModel.Stage target) {
-        long now = startTime;
+        // Each stage helper may consume more surveys than expected. Keep the simulated game
+        // clock monotonic across helper calls rather than restarting at an older timestamp.
+        long now = Math.max(startTime, state.stageSince());
         for (int i = 0; i < 12 && state.stage() != target; i++) {
             state = SettlementEmergenceModel.observe(state, survey, now).state();
             now += 20;
