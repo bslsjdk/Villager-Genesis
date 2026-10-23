@@ -32,10 +32,14 @@ public final class VillagerMemory {
     private static final String LAST_DIMENSION = "last_dimension";
     private static final String CURRENT_GOAL = "current_goal";
     private static final String KNOWN_KNOWLEDGE = "known_knowledge";
+    private static final String SUGGESTED_GOAL = "suggested_goal";
+    private static final String SUGGESTED_GOAL_SCORE = "suggested_goal_score";
+    private static final String SUGGESTED_GOAL_REASON = "suggested_goal_reason";
+    private static final String SUGGESTED_GOAL_AT = "suggested_goal_at";
 
     private final CompoundTag data;
 
-    private VillagerMemory(CompoundTag data) {
+    VillagerMemory(CompoundTag data) {
         this.data = data;
     }
 
@@ -140,6 +144,20 @@ public final class VillagerMemory {
     public void setCurrentGoal(String goal) {
         data.putString(CURRENT_GOAL, goal);
     }
+
+    /** Persist a planner proposal separately from any executor-owned active goal. */
+    public void recordSuggestion(String goal, int score, String reason, long gameTime) {
+        if (goal == null || goal.isBlank()) throw new IllegalArgumentException("Suggested goal must not be blank.");
+        data.putString(SUGGESTED_GOAL, goal);
+        data.putInt(SUGGESTED_GOAL_SCORE, Math.max(-100000, Math.min(100000, score)));
+        data.putString(SUGGESTED_GOAL_REASON, reason == null ? "" : reason.substring(0, Math.min(256, reason.length())));
+        data.putLong(SUGGESTED_GOAL_AT, Math.max(0L, gameTime));
+    }
+
+    public String suggestedGoal() { return data.getString(SUGGESTED_GOAL); }
+    public int suggestedGoalScore() { return data.getInt(SUGGESTED_GOAL_SCORE); }
+    public String suggestedGoalReason() { return data.getString(SUGGESTED_GOAL_REASON); }
+    public long suggestedGoalAt() { return data.getLong(SUGGESTED_GOAL_AT); }
 
     public Snapshot snapshot() {
         return new Snapshot(
