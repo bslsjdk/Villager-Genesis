@@ -18,7 +18,7 @@ import java.util.Map;
  * requesting chunks. No code in this service places blocks or creates entities.
  */
 public final class VillageOfflineSimulationService {
-    private static final long SCHEDULER_INTERVAL = 100L;
+    private static final long SCHEDULER_INTERVAL = 40L;
     private static final int LOCAL_SPACING = 512;
     private static final int GLOBAL_SPACING = 2048;
     private static final int PLAYER_WAKE_RADIUS = 112;
@@ -309,7 +309,7 @@ public final class VillageOfflineSimulationService {
             food = Math.max(0L, food - (long) population * 2L);
         }
 
-        int materialProduction = Math.max(0, (node.timberPotential() + node.stonePotential()) / 25 - 2);
+        int materialProduction = Math.max(0, (node.timberPotential() + node.stonePotential()) / 25 - 1);
         if ("FORESTRY".equals(node.planningRole()) || "STONEWORK".equals(node.planningRole())) {
             materialProduction += 2;
         }
