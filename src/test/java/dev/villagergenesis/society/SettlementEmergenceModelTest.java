@@ -75,6 +75,23 @@ class SettlementEmergenceModelTest {
     }
 
     @Test
+    void matureEvidenceCanReachLaterStagesInsteadOfBeingMaskedByGatheringRules() {
+        assertEquals(SettlementEmergenceModel.Stage.CAMP,
+                matureStage(campSurvey()));
+        assertEquals(SettlementEmergenceModel.Stage.VILLAGE,
+                matureStage(villageSurvey()));
+    }
+
+    private static SettlementEmergenceModel.Stage matureStage(SettlementEmergenceModel.Survey survey) {
+        var state = SettlementEmergenceModel.State.initial(0);
+        for (int i = 0; i < 12; i++) {
+            state = SettlementEmergenceModel.observe(state, survey, i * 20L).state();
+            if (state.stage() == SettlementEmergenceModel.Stage.VILLAGE) break;
+        }
+        return state.stage();
+    }
+
+    @Test
     void progressionRequiresStableEvidenceForEachStage() {
         var state = SettlementEmergenceModel.State.initial(0);
         state = advanceUntilStage(state, gatheringSurvey(), 20,
