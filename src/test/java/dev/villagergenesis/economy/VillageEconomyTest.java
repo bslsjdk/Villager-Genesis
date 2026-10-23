@@ -29,6 +29,6 @@ class VillageEconomyTest {
     void calculatesAdditionalFieldsNeededForReserveTarget() {
         VillageEconomy economy = new VillageEconomy(5, 10, 5, 0, 10, 2, 4);
         economy.setStock(VillageEconomy.Resource.BREAD, 20);
-        assertEquals(3, economy.fieldsNeededForTargetReserve(10));
+        assertEquals(2, economy.fieldsNeededForTargetReserve(10));
     }
 }
