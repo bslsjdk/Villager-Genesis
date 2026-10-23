@@ -190,13 +190,18 @@ public final class VillagerMemory {
     public int actionInterrupts() { return data.getInt(ACTION_INTERRUPTS); }
 
     public Snapshot snapshot() {
+        return snapshot(currentGoal());
+    }
+
+    /** Build a planner snapshot using an executor-owned active goal, never the latest suggestion. */
+    public Snapshot snapshot(String activeGoal) {
         return new Snapshot(
                 firstSeen(),
                 lastSeen(),
                 observations(),
                 positionChanges(),
                 data.getString(LAST_DIMENSION),
-                currentGoal()
+                activeGoal == null ? "" : activeGoal
         );
     }
 
