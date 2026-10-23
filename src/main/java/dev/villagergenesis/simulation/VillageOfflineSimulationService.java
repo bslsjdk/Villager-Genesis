@@ -18,7 +18,7 @@ import java.util.Map;
  * requesting chunks. No code in this service places blocks or creates entities.
  */
 public final class VillageOfflineSimulationService {
-    private static final long SCHEDULER_INTERVAL = 100L;
+    private static final long SCHEDULER_INTERVAL = 40L;
     private static final int LOCAL_SPACING = 512;
     private static final int GLOBAL_SPACING = 2048;
     private static final int PLAYER_WAKE_RADIUS = 112;
@@ -277,9 +277,28 @@ public final class VillageOfflineSimulationService {
         long materials = node.materials();
         if (population == 0) population = 4;
 
-        int foodProduction = node.foodPotential() / 5;
-        if ("AGRICULTURE".equals(node.planningRole())) foodProduction += 4;
-        if ("TRADE".equals(node.planningRole())) foodProduction += 1;
+        // Remote nodes do not receive player-triggered planning tasks, so choose a conservative
+        // local specialization from the already-known resource estimates instead of leaving every
+        // distant settlement permanently BALANCED.
+        if ("BALANCED".equals(node.planningRole())) {
+            int foodPotential = node.foodPotential();
+            int timberPotential = node.timberPotential();
+            int stonePotential = node.stonePotential();
+            if (foodPotential >= timberPotential + 15 && foodPotential >= stonePotential + 15) {
+                node.setPlanningRole("AGRICULTURE");
+            } else if (timberPotential >= foodPotential + 15 && timberPotential >= stonePotential + 15) {
+                node.setPlanningRole("FORESTRY");
+            } else if (stonePotential >= foodPotential + 15 && stonePotential >= timberPotential + 15) {
+                node.setPlanningRole("STONEWORK");
+            }
+        }
+
+        // Production scales with the number of residents able to work. The previous flat output
+        // capped even a fertile plains settlement at a handful of people and left many unknown
+        // nodes stuck at their initial population forever.
+        int foodProduction = (int) ((long) node.foodPotential() * population / 40L);
+        if ("AGRICULTURE".equals(node.planningRole())) foodProduction += Math.max(2, population / 2);
+        if ("TRADE".equals(node.planningRole())) foodProduction += Math.max(1, population / 5);
         long foodConsumption = (long) population * 2L;
         food = Math.max(0L, Math.min(1_000_000_000L, food + foodProduction - foodConsumption));
 
@@ -290,7 +309,7 @@ public final class VillageOfflineSimulationService {
             food = Math.max(0L, food - (long) population * 2L);
         }
 
-        int materialProduction = Math.max(0, (node.timberPotential() + node.stonePotential()) / 25 - 2);
+        int materialProduction = Math.max(0, (node.timberPotential() + node.stonePotential()) / 25 - 1);
         if ("FORESTRY".equals(node.planningRole()) || "STONEWORK".equals(node.planningRole())) {
             materialProduction += 2;
         }
