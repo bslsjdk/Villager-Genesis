@@ -2,6 +2,7 @@ package dev.villagergenesis;
 
 import dev.villagergenesis.memory.VillagerMemoryService;
 import dev.villagergenesis.ai.VillageAutonomyService;
+import dev.villagergenesis.simulation.VillageOfflineSimulationService;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -17,6 +18,8 @@ public final class VillagerGenesis {
     public VillagerGenesis(IEventBus modEventBus, ModContainer modContainer) {
         NeoForge.EVENT_BUS.addListener(VillagerMemoryService::onEntityTickPost);
         NeoForge.EVENT_BUS.addListener(VillageAutonomyService::onEntityJoinLevel);
-        LOGGER.info("Villager Genesis initialized. Vanilla survival/work goals are preserved; low-priority exploration and knowledge sharing are enabled.");
+        NeoForge.EVENT_BUS.addListener(VillageOfflineSimulationService::onVillagerJoin);
+        NeoForge.EVENT_BUS.addListener(VillageOfflineSimulationService::onLevelTick);
+        LOGGER.info("Villager Genesis initialized. Bounded settlement simulation and low-priority autonomy are enabled.");
     }
 }
