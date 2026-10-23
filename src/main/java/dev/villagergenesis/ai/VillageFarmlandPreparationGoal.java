@@ -13,6 +13,7 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 
@@ -25,6 +26,8 @@ import java.util.EnumSet;
  */
 public final class VillageFarmlandPreparationGoal extends Goal {
     private static final String NEXT_TRY = "villager_genesis_next_farmland_prepare";
+    private static final String NEXT_SCAN = "villager_genesis_next_farmland_scan";
+    private static final int SCAN_COOLDOWN_TICKS = 160;
     private static final int COOLDOWN_TICKS = 200;
     private static final int SEARCH_RADIUS = 5;
     private final Villager villager;
@@ -46,6 +49,8 @@ public final class VillageFarmlandPreparationGoal extends Goal {
         }
         ItemStack tool = villager.getMainHandItem();
         if (!(tool.getItem() instanceof HoeItem) || tool.getDamageValue() >= tool.getMaxDamage()) return false;
+        if (level.getGameTime() < villager.getPersistentData().getLong(NEXT_SCAN)) return false;
+        villager.getPersistentData().putLong(NEXT_SCAN, level.getGameTime() + SCAN_COOLDOWN_TICKS);
         target = findCandidate(level, villager.blockPosition());
         return target != null;
     }
@@ -136,14 +141,11 @@ public final class VillageFarmlandPreparationGoal extends Goal {
         for (BlockPos nearby : BlockPos.betweenClosed(pos.offset(-1, -1, -1), pos.offset(1, 2, 1))) {
             if (!level.hasChunkAt(nearby)) continue;
             BlockState state = level.getBlockState(nearby);
-            if (state.is(Blocks.FARMLAND) || state.is(Blocks.FARMLAND) || state.is(Blocks.DIRT_PATH)
-                    || state.is(Blocks.BEDROCK) || state.is(Blocks.CRAFTING_TABLE)
-                    || state.is(Blocks.CHEST) || state.is(Blocks.TRAPPED_CHEST) || state.is(Blocks.BARREL)
+            if (state.is(Blocks.FARMLAND) || state.is(Blocks.DIRT_PATH)
+                    || state.is(Blocks.CRAFTING_TABLE) || state.is(Blocks.CHEST)
+                    || state.is(Blocks.TRAPPED_CHEST) || state.is(Blocks.BARREL)
                     || state.is(Blocks.FURNACE) || state.is(Blocks.BLAST_FURNACE) || state.is(Blocks.SMOKER)
-                    || state.is(Blocks.BED) || state.is(Blocks.OAK_DOOR) || state.is(Blocks.SPRUCE_DOOR)
-                    || state.is(Blocks.BIRCH_DOOR) || state.is(Blocks.JUNGLE_DOOR) || state.is(Blocks.ACACIA_DOOR)
-                    || state.is(Blocks.DARK_OAK_DOOR) || state.is(Blocks.MANGROVE_DOOR) || state.is(Blocks.CHERRY_DOOR)
-                    || state.is(Blocks.BAMBOO_DOOR) || state.is(Blocks.CRIMSON_DOOR) || state.is(Blocks.WARPED_DOOR)) {
+                    || state.is(BlockTags.BEDS) || state.is(BlockTags.DOORS)) {
                 return true;
             }
             if (state.hasBlockEntity()) return true;
