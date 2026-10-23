@@ -89,15 +89,25 @@ public final class VillageOfflineSimulationService {
         UUID id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
         if (graph.node(id) != null) return;
 
-        
-        // BiomeManager sampling is data-only; never ask the chunk source to create a chunk.
+        // Global safety gate: if the target chunk is not already loaded, do not call any
+        // terrain API (including getBiome). Store only explicitly estimated metadata.
+        if (!level.hasChunkAt(samplePos)) {
+            String biome = "unobserved";
+            int estimatedY = level.getSeaLevel();
+            int terrainScore = 45;
+            int food = 40;
+            int timber = 35;
+            int stone = 45;
+            graph.addNode(id, x, z, estimatedY, biome, terrainScore, now)
+                    .updateTerrain(estimatedY, biome, terrainScore, food, timber, stone);
+            graph.markChanged();
+            return;
+        }
+
+        // Every terrain query is below the loaded-chunk gate.
         String biome = level.getBiome(samplePos).unwrapKey()
                 .map(holder -> holder.location().toString()).orElse("unknown");
-        // Heightmaps are read only when the target chunk is already loaded. For all other
-        // locations retain an explicit estimate instead of forcing terrain generation.
-        int estimatedY = level.hasChunkAt(samplePos)
-                ? level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z)
-                : level.getSeaLevel();
+        int estimatedY = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
         int terrainScore = scoreBiome(biome);
         if (terrainScore < 20) return;
 
