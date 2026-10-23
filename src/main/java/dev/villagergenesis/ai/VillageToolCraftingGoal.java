@@ -53,9 +53,10 @@ public final class VillageToolCraftingGoal extends Goal {
         if (desiredTool == null || alreadyHasUsableTool(desiredTool)) return false;
 
         ItemStack held = villager.getMainHandItem();
-        if (!held.isEmpty() && !isMatchingTool(held, desiredTool)) return false;
-
         Container inventory = villager.getInventory();
+        if (!held.isEmpty() && !isMatchingTool(held, desiredTool)
+                && !hasRoomForStack(inventory, held)) return false;
+
         if (findToolSlot(inventory, desiredTool) >= 0) return true;
         if (countPlanks(inventory) < plankCost(desiredTool)) return false;
         if (count(inventory, Items.STICK) < 2 && countPlanks(inventory) < plankCost(desiredTool) + 2) return false;
@@ -83,6 +84,18 @@ public final class VillageToolCraftingGoal extends Goal {
             finish(level);
             finished = true;
             return;
+        }
+
+        // Preserve held seeds, food, and other items before equipping a crafted tool.
+        ItemStack held = villager.getMainHandItem();
+        if (!held.isEmpty() && !isMatchingTool(held, desiredTool)) {
+            if (!hasRoomForStack(inventory, held) || !insertFully(inventory, held.copy())) {
+                finish(level);
+                finished = true;
+                return;
+            }
+            villager.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            inventory.setChanged();
         }
 
         int planksNeeded = plankCost(desiredTool);
@@ -229,6 +242,36 @@ public final class VillageToolCraftingGoal extends Goal {
             if (stack.is(item)) total += stack.getCount();
         }
         return total;
+    }
+
+    private boolean hasRoomForStack(Container inventory, ItemStack candidate) {
+        int remaining = candidate.getCount();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (stack.isEmpty()) return true;
+            if (ItemStack.isSameItemSameComponents(stack, candidate)) {
+                remaining -= Math.max(0, stack.getMaxStackSize() - stack.getCount());
+                if (remaining <= 0) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean insertFully(Container inventory, ItemStack output) {
+        for (int i = 0; i < inventory.getContainerSize() && !output.isEmpty(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (stack.isEmpty()) {
+                int moved = Math.min(output.getCount(), output.getMaxStackSize());
+                inventory.setItem(i, output.copyWithCount(moved));
+                output.shrink(moved);
+            } else if (ItemStack.isSameItemSameComponents(stack, output)
+                    && stack.getCount() < stack.getMaxStackSize()) {
+                int moved = Math.min(output.getCount(), stack.getMaxStackSize() - stack.getCount());
+                stack.grow(moved);
+                output.shrink(moved);
+            }
+        }
+        return output.isEmpty();
     }
 
     private boolean hasRoomForSticks(Container inventory) {
