@@ -58,18 +58,10 @@ public final class VillageKnowledgeSharingService {
         var knownBeforeReading = sourceMemory.knownKnowledge();
         // Physical books are untrusted input: accept only registered lessons whose prerequisites
         // are already satisfied. A forged/old archive must not inject arbitrary IDs or skip a course.
-        var eligibleLessons = KnowledgeLearningPlanner.recommendLearning(
-                registry, knownBeforeReading, 0, registry.all().size());
-        var eligibleIds = eligibleLessons.stream()
-                .map(definition -> definition.id())
-                .collect(java.util.stream.Collectors.toSet());
-        var unknownArchived = archivedKnowledge.stream()
-                .filter(eligibleIds::contains)
-                .sorted()
-                .limit(genius ? 3 : 1)
-                .toList();
-        for (String archived : unknownArchived) {
-            sourceMemory.learnKnowledge(archived);
+        var eligibleArchived = KnowledgeLearningPlanner.recommendArchivedKnowledge(
+                registry, archivedKnowledge, knownBeforeReading, genius ? 3 : 1);
+        for (var lesson : eligibleArchived) {
+            sourceMemory.learnKnowledge(lesson.id());
         }
 
         var known = sourceMemory.knownKnowledge();
