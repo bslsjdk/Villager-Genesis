@@ -17,6 +17,8 @@ public final class VillageWorkPlanner {
         STORE_SURPLUS_FOOD,
         PROTECT_SEEDS,
         GATHER_BUILDING_MATERIALS,
+        EXPAND_STORAGE,
+        SURVEY_STORAGE_SITE,
         NO_ACTION
     }
 
@@ -39,6 +41,31 @@ public final class VillageWorkPlanner {
     public record Proposal(Work work, int priority, String reason) {}
 
     private VillageWorkPlanner() {}
+
+    /**
+     * Full settlement pass: combine farm decisions with storage-capacity planning. The supplied
+     * wood count and safe-site count must come from real world observations, not virtual ledgers.
+     */
+    public static List<Proposal> plan(VisibleStorageScanner.Snapshot storage, FarmSurvey farm,
+                                     double estimatedFoodDays, int targetReserveDays,
+                                     int availableWoodItems, int safeStorageSites,
+                                     int desiredFreeStorageSlots) {
+        List<Proposal> proposals = new ArrayList<>(plan(storage, farm, estimatedFoodDays, targetReserveDays));
+        StorageExpansionPlanner.Proposal storageProposal = StorageExpansionPlanner.plan(
+                storage, availableWoodItems, safeStorageSites, desiredFreeStorageSlots);
+        if (storageProposal.action() == StorageExpansionPlanner.Action.BUILD_STORAGE) {
+            proposals.removeIf(p -> p.work() == Work.NO_ACTION);
+            proposals.add(new Proposal(Work.EXPAND_STORAGE, storageProposal.priority(),
+                    storageProposal.reason()));
+        } else if (storageProposal.action() == StorageExpansionPlanner.Action.SURVEY_MORE_STORAGE_AREA) {
+            proposals.removeIf(p -> p.work() == Work.NO_ACTION);
+            proposals.add(new Proposal(Work.SURVEY_STORAGE_SITE, storageProposal.priority(),
+                    storageProposal.reason()));
+        }
+        proposals.sort(Comparator.comparingInt(Proposal::priority).reversed()
+                .thenComparing(p -> p.work().name()));
+        return List.copyOf(proposals);
+    }
 
     public static List<Proposal> plan(VisibleStorageScanner.Snapshot storage, FarmSurvey farm,
                                      double estimatedFoodDays, int targetReserveDays) {
