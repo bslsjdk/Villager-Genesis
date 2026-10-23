@@ -21,6 +21,7 @@ public final class VillageOfflineSimulationService {
     private static final int NODE_SPACING = 512;
     private static final int PLAYER_WAKE_RADIUS = 112;
     private static final int GRAPH_NODE_BUDGET = 2;
+    private static final int MAX_ABSTRACT_NODES = 512;
     private static final int GRAPH_NEIGHBOURS = 3;
     private static final Map<ServerLevel, Long> NEXT_LEVEL_STEP = new WeakHashMap<>();
     private static final Map<ServerLevel, Integer> CANDIDATE_CURSOR = new WeakHashMap<>();
@@ -53,6 +54,7 @@ public final class VillageOfflineSimulationService {
      * Height remains an estimate until a safe non-loading terrain sampler is added.
      */
     private static void seedOneCandidate(ServerLevel level, SettlementNodeGraph graph, long now) {
+        if (graph.nodes().size() >= MAX_ABSTRACT_NODES) return;
         int cursor;
         synchronized (CANDIDATE_CURSOR) {
             cursor = CANDIDATE_CURSOR.getOrDefault(level, 0);
