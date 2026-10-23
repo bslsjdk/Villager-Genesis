@@ -31,6 +31,13 @@ class SettlementStaffingPolicyTest {
     }
 
     @Test
+    void staffingTargetsNeverExceedTinyPopulation() {
+        var targets = SettlementStaffingPolicy.desiredSlots(
+                new SettlementStaffingPolicy.Survey(1, 0, 0, 0, 1, 0, 0, true));
+        assertTrue(targets.values().stream().mapToInt(Integer::intValue).sum() <= 1);
+    }
+
+    @Test
     void rejectsInvalidSurvey() {
         assertThrows(IllegalArgumentException.class,
                 () -> new SettlementStaffingPolicy.Survey(4, -1, 0, 0, 0, 0, 0, true));
