@@ -78,10 +78,14 @@ public final class VillageGuardCombatGoal extends Goal {
                 if (fireRealArrow(level, target)) {
                     VillagerMemory.forVillager(guard).recordActionOutcome("guard_ranged_combat", "success",
                             "Fired a real arrow at a hostile mob while defending the settlement.", level.getGameTime());
+                    attackCooldown = ATTACK_COOLDOWN_TICKS;
+                    return;
                 }
-                attackCooldown = ATTACK_COOLDOWN_TICKS;
+                // No real arrows are available: do not freeze at range; close in and use melee.
+                attackCooldown = 0;
+            } else {
+                return;
             }
-            return;
         }
 
         if (repathCooldown-- <= 0) {
@@ -109,7 +113,6 @@ public final class VillageGuardCombatGoal extends Goal {
     }
 
     private boolean fireRealArrow(ServerLevel level, LivingEntity victim) {
-        // The storage scanner is bounded and only inspects already-loaded chunks.
         VisibleStorageScanner.Snapshot snapshot;
         try {
             snapshot = VisibleStorageScanner.scan(level, guard.blockPosition(), 8);
@@ -124,7 +127,6 @@ public final class VillageGuardCombatGoal extends Goal {
                 ItemStack stored = container.getItem(slot);
                 if (!stored.is(Items.ARROW) || stored.isEmpty()) continue;
 
-                // Consume the real arrow before spawning the projectile to prevent free ammunition.
                 ItemStack ammo = container.removeItem(slot, 1);
                 if (ammo.isEmpty() || !ammo.is(Items.ARROW)) {
                     if (!ammo.isEmpty()) container.setItem(slot, ammo);
