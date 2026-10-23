@@ -73,6 +73,16 @@ class KnowledgeLearningPlannerTest {
     }
 
     @Test
+    void rejectsIndirectPrerequisiteCycles() {
+        registry.register(new KnowledgeDefinition(
+                "cycle_a", "Cycle A", "Temporary dependency", Set.of("cycle_b"), 50, 5));
+
+        assertThrows(IllegalArgumentException.class, () -> registry.register(
+                new KnowledgeDefinition(
+                        "cycle_b", "Cycle B", "Would close a cycle", Set.of("cycle_a"), 50, 5)));
+    }
+
+    @Test
     void clampsThreatAndReturnsImmutableResults() {
         var recommendations = KnowledgeLearningPlanner.recommendLearning(registry, Set.of(), 1000, 2);
 
