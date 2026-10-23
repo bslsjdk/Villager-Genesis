@@ -84,3 +84,12 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - CI passed: GitHub Actions completed successfully for the relevant commit.
 - In-game verified: tested in Minecraft; never infer this from CI.
 - Not implemented: keep listed until code and validation exist.
+
+
+## Bottom-up live group discovery (new source; CI pending)
+
+- `LocalVillagerGroupTracker` is a world `SavedData` service that discovers groups from the current `ServerLevel` entity iteration, without searching for existing vanilla villages or requesting chunks.
+- Membership UUIDs, stable group UUIDs, centre coordinates, first/last observation, distinct in-game resident days, and repeated presence scans are persisted.
+- The existing 40-tick server-level scheduler now invokes the tracker with a per-scan cap of 256 live villagers. Group membership uses bounded proximity and a maximum group size; absent entities are not immediately treated as dead or permanently departed.
+- This is the first live discovery/persistence step, not a finished settlement simulation. It currently does not yet survey actual beds, food stocks, farm plots, safe build sites, or completed shared projects, and it deliberately does not promote groups to camps/villages until those real-world checks are wired in. It does not yet assign persistent settlement IDs to the existing role allocator or create a shared task queue per live group.
+- The stage-model CI failure was traced to the progression test restarting its simulated timestamp at an earlier value between helper calls. The test now keeps the simulated game clock monotonic. The updated Actions run must still pass before this is called CI-verified.
