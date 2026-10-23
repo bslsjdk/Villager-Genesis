@@ -36,6 +36,13 @@ public final class VillagerMemory {
     private static final String SUGGESTED_GOAL_SCORE = "suggested_goal_score";
     private static final String SUGGESTED_GOAL_REASON = "suggested_goal_reason";
     private static final String SUGGESTED_GOAL_AT = "suggested_goal_at";
+    private static final String LAST_ACTION_GOAL = "last_action_goal";
+    private static final String LAST_ACTION_RESULT = "last_action_result";
+    private static final String LAST_ACTION_REASON = "last_action_reason";
+    private static final String LAST_ACTION_AT = "last_action_at";
+    private static final String ACTION_SUCCESSES = "action_successes";
+    private static final String ACTION_FAILURES = "action_failures";
+    private static final String ACTION_INTERRUPTS = "action_interrupts";
 
     private final CompoundTag data;
 
@@ -158,6 +165,29 @@ public final class VillagerMemory {
     public int suggestedGoalScore() { return data.getInt(SUGGESTED_GOAL_SCORE); }
     public String suggestedGoalReason() { return data.getString(SUGGESTED_GOAL_REASON); }
     public long suggestedGoalAt() { return data.getLong(SUGGESTED_GOAL_AT); }
+
+    /** Record an observed executor outcome; a proposal alone must never count as success. */
+    public void recordActionOutcome(String goal, String result, String reason, long gameTime) {
+        if (goal == null || goal.isBlank()) throw new IllegalArgumentException("Action goal must not be blank.");
+        if (!"success".equals(result) && !"failure".equals(result) && !"interrupted".equals(result)) {
+            throw new IllegalArgumentException("Unsupported action result: " + result);
+        }
+        data.putString(LAST_ACTION_GOAL, goal);
+        data.putString(LAST_ACTION_RESULT, result);
+        data.putString(LAST_ACTION_REASON, reason == null ? "" : reason.substring(0, Math.min(256, reason.length())));
+        data.putLong(LAST_ACTION_AT, Math.max(0L, gameTime));
+        String counter = "success".equals(result) ? ACTION_SUCCESSES
+                : "failure".equals(result) ? ACTION_FAILURES : ACTION_INTERRUPTS;
+        data.putInt(counter, data.getInt(counter) == Integer.MAX_VALUE ? Integer.MAX_VALUE : data.getInt(counter) + 1);
+    }
+
+    public String lastActionGoal() { return data.getString(LAST_ACTION_GOAL); }
+    public String lastActionResult() { return data.getString(LAST_ACTION_RESULT); }
+    public String lastActionReason() { return data.getString(LAST_ACTION_REASON); }
+    public long lastActionAt() { return data.getLong(LAST_ACTION_AT); }
+    public int actionSuccesses() { return data.getInt(ACTION_SUCCESSES); }
+    public int actionFailures() { return data.getInt(ACTION_FAILURES); }
+    public int actionInterrupts() { return data.getInt(ACTION_INTERRUPTS); }
 
     public Snapshot snapshot() {
         return new Snapshot(

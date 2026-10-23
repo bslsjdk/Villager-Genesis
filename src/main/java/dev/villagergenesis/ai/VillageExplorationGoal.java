@@ -97,11 +97,22 @@ public final class VillageExplorationGoal extends Goal {
     public void stop() {
         villager.getNavigation().stop();
         if (villager.level() instanceof ServerLevel level) {
-            villager.getPersistentData().putLong(NEXT_EXPLORATION,
-                    level.getGameTime() + COOLDOWN_TICKS);
+            long now = level.getGameTime();
+            villager.getPersistentData().putLong(NEXT_EXPLORATION, now + COOLDOWN_TICKS);
             if (destination != null && villager.blockPosition().distSqr(destination) <= 4.0D) {
-                VillagerMemory.forVillager(villager).learnKnowledge("local_exploration");
+                VillagerMemory memory = VillagerMemory.forVillager(villager);
+                memory.recordActionOutcome("explore", "success",
+                        "Reached the selected safe waypoint.", now);
+                memory.learnKnowledge("local_exploration");
                 rememberWaypoint(villager, destination);
+            } else if (travelTicks >= MAX_TRAVEL_TICKS) {
+                VillagerMemory.forVillager(villager).recordActionOutcome("explore", "failure",
+                        "Travel exceeded the exploration time budget.", now);
+            } else {
+                VillagerMemory.forVillager(villager).recordActionOutcome("explore", "interrupted",
+                        villager.getTarget() != null
+                                ? "Exploration interrupted because a target appeared."
+                                : "Exploration ended before reaching the waypoint.", now);
             }
         }
         villager.getPersistentData().putString("villager_genesis_current_goal", "observe");
