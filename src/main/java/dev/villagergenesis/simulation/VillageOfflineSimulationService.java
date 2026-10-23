@@ -18,13 +18,13 @@ import java.util.Map;
  */
 public final class VillageOfflineSimulationService {
     private static final long SCHEDULER_INTERVAL = 200L;
-    private static final int NODE_SPACING = 512;
+    private static final int LOCAL_SPACING = 512;
+    private static final int GLOBAL_SPACING = 2048;
     private static final int PLAYER_WAKE_RADIUS = 112;
     private static final int GRAPH_NODE_BUDGET = 2;
     private static final int MAX_ABSTRACT_NODES = 512;
     private static final int GRAPH_NEIGHBOURS = 3;
     private static final Map<ServerLevel, Long> NEXT_LEVEL_STEP = new WeakHashMap<>();
-    private static final Map<ServerLevel, Integer> CANDIDATE_CURSOR = new WeakHashMap<>();
     private static final Map<ServerLevel, Integer> ROUND_ROBIN = new WeakHashMap<>();
 
     private VillageOfflineSimulationService() {}
@@ -49,32 +49,45 @@ public final class VillageOfflineSimulationService {
     }
 
     /**
-     * Nodes are selected on a deterministic expanding lattice around world spawn. Sampling a
-     * biome uses the biome source; no getChunk/loadChunk/getBlockState or block mutation occurs.
-     * Height remains an estimate until a safe non-loading terrain sampler is added.
+     * Adaptive deterministic probing uses coarse seed-derived global exploration and fine local
+     * refinement. No chunk/block access or world mutation occurs. Height remains an estimate.
      */
     private static void seedOneCandidate(ServerLevel level, SettlementNodeGraph graph, long now) {
         if (graph.nodes().size() >= MAX_ABSTRACT_NODES) return;
-        int cursor;
-        synchronized (CANDIDATE_CURSOR) {
-            cursor = CANDIDATE_CURSOR.getOrDefault(level, 0);
-            CANDIDATE_CURSOR.put(level, cursor + 1);
-        }
-        int ring = 1 + cursor / 8;
-        int side = cursor % 8;
+        int cursor = graph.candidateCursor();
+        graph.advanceCandidateCursor();
         int[][] directions = {
                 {1, 0}, {1, 1}, {0, 1}, {-1, 1},
                 {-1, 0}, {-1, -1}, {0, -1}, {1, -1}
         };
-        BlockPos spawn = level.getSharedSpawnPos();
-        int x = spawn.getX() + directions[side][0] * ring * NODE_SPACING;
-        int z = spawn.getZ() + directions[side][1] * ring * NODE_SPACING;
+        boolean refine = cursor % 4 == 3 && !graph.nodes().isEmpty();
+        int x;
+        int z;
+        if (refine) {
+            List<SettlementNodeGraph.Node> ordered = new ArrayList<>(graph.nodes());
+            ordered.sort(java.util.Comparator.comparing(n -> n.id().toString()));
+            SettlementNodeGraph.Node anchor = ordered.get(Math.floorMod(cursor / 4, ordered.size()));
+            int ring = 1 + (cursor / 32) % 4;
+            int side = (cursor / 4) % directions.length;
+            x = anchor.x() + directions[side][0] * ring * LOCAL_SPACING;
+            z = anchor.z() + directions[side][1] * ring * LOCAL_SPACING;
+        } else {
+            int globalIndex = cursor - cursor / 4;
+            int ring = 1 + globalIndex / directions.length;
+            int side = globalIndex % directions.length;
+            long seed = level.getSeed() ^ level.dimension().location().toString().hashCode();
+            int originX = (int) Math.floorMod(seed, 8192L) - 4096;
+            int originZ = (int) Math.floorMod(seed >>> 13, 8192L) - 4096;
+            x = originX + directions[side][0] * ring * GLOBAL_SPACING;
+            z = originZ + directions[side][1] * ring * GLOBAL_SPACING;
+        }
         String dimension = level.dimension().location().toString();
         String key = level.getSeed() + "|" + dimension + "|" + x + "|" + z;
+        BlockPos samplePos = new BlockPos(x, level.getSeaLevel(), z);
         UUID id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
         if (graph.node(id) != null) return;
 
-        BlockPos samplePos = new BlockPos(x, spawn.getY(), z);
+        
         String biome = level.getBiome(samplePos).unwrapKey()
                 .map(holder -> holder.location().toString()).orElse("unknown");
         int terrainScore = scoreBiome(biome);
@@ -83,8 +96,8 @@ public final class VillageOfflineSimulationService {
         int food = biome.contains("plains") || biome.contains("meadow") || biome.contains("river") ? 75 : 40;
         int timber = biome.contains("forest") || biome.contains("taiga") || biome.contains("grove") ? 80 : 35;
         int stone = biome.contains("mountain") || biome.contains("windswept") || biome.contains("stony") ? 80 : 45;
-        graph.addNode(id, x, z, spawn.getY(), biome, terrainScore, now)
-                .updateTerrain(spawn.getY(), biome, terrainScore, food, timber, stone);
+        graph.addNode(id, x, z, level.getSeaLevel(), biome, terrainScore, now)
+                .updateTerrain(level.getSeaLevel(), biome, terrainScore, food, timber, stone);
         graph.markChanged();
     }
 
