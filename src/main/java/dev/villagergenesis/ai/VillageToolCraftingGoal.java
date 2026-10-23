@@ -148,8 +148,8 @@ public final class VillageToolCraftingGoal extends Goal {
     }
 
     private boolean alreadyHasUsableTool(Item desired) {
-        if (isMatchingTool(villager.getMainHandItem(), desired)) return true;
-        return findToolSlot(villager.getInventory(), desired) >= 0;
+        // Inventory tools are handled by the next branch so they can be equipped, not ignored.
+        return isMatchingTool(villager.getMainHandItem(), desired);
     }
 
     private int findToolSlot(Container inventory, Item desired) {
