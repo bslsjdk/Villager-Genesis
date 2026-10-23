@@ -1,6 +1,7 @@
 package dev.villagergenesis.ai;
 
 import dev.villagergenesis.memory.VillagerMemory;
+import dev.villagergenesis.ai.VillageStructureRegistry;
 import dev.villagergenesis.society.VillageRoleService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -135,7 +136,10 @@ public final class VillageFoodDeliveryGoal extends Goal {
                     BlockPos pos = origin.offset(dx, dy, dz);
                     if (!level.hasChunkAt(pos)) continue;
                     BlockState state = level.getBlockState(pos);
-                    if (!isPublicStorage(state)) continue;
+                    // Only use a barrel that this mod recorded as settlement-built storage.
+                    // Nearby player chests and unregistered barrels are not communal property.
+                    if (!isPublicStorage(state)
+                            || !VillageStructureRegistry.get(level).isOwnedBy(pos, "storage_barrel")) continue;
                     BlockEntity entity = level.getBlockEntity(pos);
                     if (!(entity instanceof Container container) || !canAcceptFood(container, villager.getInventory())) continue;
                     double distance = pos.distSqr(origin);
