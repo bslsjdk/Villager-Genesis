@@ -14,9 +14,11 @@ This repository is the foundation of a long-term project. The first milestone fo
 - [x] Persistent per-villager observation memory
 - [x] Throttled server-side memory updates
 - [x] Initial goal-planning and skill-registry abstractions
-- [ ] Verified in-game behavior and automated build validation
-- [ ] Villager needs and autonomous task execution
-- [ ] Cooperation, roles, inventories, and village economy
+- [x] Automated Gradle build on the current development branch (GitHub Actions)
+- [ ] Verified in-game behavior (still required; CI is not a substitute)
+- [x] Initial autonomous task execution for resource gathering, basic crafting, tool equipping, farming, food delivery, rest, and shelter construction
+- [x] Initial social roles and role-specific work goals
+- [ ] Complete settlement-wide coordination, shared resource accounting, and robust dynamic staffing
 - [ ] Knowledge transfer and practical technology development
 - [ ] Inter-village relations, diplomacy, laws, and conflict
 - [ ] Engineering sandbox and verified redstone blueprints
@@ -45,8 +47,15 @@ The GitHub Actions workflow also builds the project on pushes and pull requests.
 
 The current memory layer records when a villager was first observed, the last observed position and dimension, elapsed observation count, and movement observations. Updates are throttled rather than performing planning work on every entity tick.
 
-**Important:** the initial planner and skill registry are foundations, not a finished autonomous civilization. At this stage the mod does not replace vanilla AI, build structures, or claim to have discovered technologies. Those features will be introduced behind testable interfaces.
+**Important:** the project now includes experimental server-side villager goals that gather real drops, craft basic items from carried materials, plant/harvest tracked crops, deliver food to nearby storage, rest without a bed, and build mod-owned shelters from real blocks/items. This is still an incomplete prototype, not a finished autonomous civilization. The latest CI build has passed, but actual in-game behavior, goal interactions, long-running settlement stability, and save/reload behavior still require verification. A successful build must never be presented as proof that these behaviors work in-game.
 
 ## License
 
 All Rights Reserved for now. Do not redistribute or relicense without checking the repository owner’s intent.
+
+## Founding and shelter prototype
+
+- Residents can rest on safe ground at night when no nearby bed is available; this does not create a vanilla bed-sleep state.
+- A resident carrying at least nine real plank blocks can attempt to build a small open-front starter shelter without needing a chest, crafting table, wool, or bed.
+- The larger registered shelter remains a separate construction path that consumes real stored materials. Both construction systems avoid replacing non-air blocks and use the structure registry for ownership metadata.
+- These behaviors are experimental and have not yet been confirmed in a live Minecraft world.
