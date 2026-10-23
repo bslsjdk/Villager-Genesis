@@ -18,7 +18,7 @@ import java.util.Map;
  * requesting chunks. No code in this service places blocks or creates entities.
  */
 public final class VillageOfflineSimulationService {
-    private static final long SCHEDULER_INTERVAL = 200L;
+    private static final long SCHEDULER_INTERVAL = 100L;
     private static final int LOCAL_SPACING = 512;
     private static final int GLOBAL_SPACING = 2048;
     private static final int PLAYER_WAKE_RADIUS = 112;
@@ -51,7 +51,7 @@ public final class VillageOfflineSimulationService {
             // Spend more on graph quality while small; taper work as the graph grows.
             int adaptiveBudget = nodeCount < 32 ? 4 : nodeCount < 128 ? 2 : 1;
             graph.rebuildLocalEdges(adaptiveBudget, GRAPH_NEIGHBOURS, now);
-            advanceOneNode(level, graph, now);
+            advanceNodes(level, graph, now);
         }
         // Process at most one persistent abstract plan per scheduler step. This is data-only.
         SettlementPlanningService.processOne(graph, queue, now);
@@ -212,15 +212,27 @@ public final class VillageOfflineSimulationService {
         return 45;
     }
 
-    private static void advanceOneNode(ServerLevel level, SettlementNodeGraph graph, long now) {
-        List<SettlementNodeGraph.Node> nodes = new ArrayList<>(graph.nodes());
+    /**
+     * Advance a bounded batch each scheduler pass. The previous one-node-per-200-tick
+     * round-robin meant a 512-node world could wait over 28 hours for a full economic pass.
+     * This keeps work bounded while giving larger graphs a proportionally larger, capped budget.
+     */
+    private static void advanceNodes(ServerLevel level, SettlementNodeGraph graph, long now) {
+        List<SettlementNodeGraph.Node> nodes = graph.nodes();
         if (nodes.isEmpty()) return;
-        int index;
+        int budget = nodes.size() < 32 ? 8 : nodes.size() < 128 ? 16 : 32;
+        int start;
         synchronized (ROUND_ROBIN) {
-            index = Math.floorMod(ROUND_ROBIN.getOrDefault(level, 0), nodes.size());
-            ROUND_ROBIN.put(level, (index + 1) % nodes.size());
+            start = Math.floorMod(ROUND_ROBIN.getOrDefault(level, 0), nodes.size());
+            ROUND_ROBIN.put(level, (start + Math.min(budget, nodes.size())) % nodes.size());
         }
-        SettlementNodeGraph.Node node = nodes.get(index);
+        for (int offset = 0; offset < Math.min(budget, nodes.size()); offset++) {
+            advanceNode(level, graph, nodes.get((start + offset) % nodes.size()), now);
+        }
+    }
+
+    private static void advanceNode(ServerLevel level, SettlementNodeGraph graph,
+                                    SettlementNodeGraph.Node node, long now) {
         double radiusSqr = (double) PLAYER_WAKE_RADIUS * PLAYER_WAKE_RADIUS;
         boolean nearby = false;
         for (var player : level.players()) {
@@ -236,7 +248,6 @@ public final class VillageOfflineSimulationService {
                     || node.state() == SettlementNodeGraph.State.SETTLING) {
                 node.setState(SettlementNodeGraph.State.WAKE_QUEUED);
                 graph.markChanged();
-                // Wake-up only queues a data-only planning task; it does not start construction.
                 SettlementTaskQueue.get(level).enqueueUnique(
                         node.id(), SettlementTaskQueue.Type.PLAN_SETTLEMENT, now);
             }
