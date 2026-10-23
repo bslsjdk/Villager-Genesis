@@ -67,7 +67,12 @@ public final class VillageEquipmentGoal extends Goal {
             if (!villager.getItemBySlot(slot).isEmpty()) continue;
             for (VisibleStorageScanner.StorageContainer found : snapshot.containers()) {
                 BlockPos pos = new BlockPos(found.x(), found.y(), found.z());
-                if (!level.hasChunkAt(pos) || !(level.getBlockEntity(pos) instanceof Container container)) continue;
+                // Only take gear from a barrel explicitly registered as settlement-built storage.
+                // A nearby player chest is not communal property merely because it is visible.
+                if (!level.hasChunkAt(pos)
+                        || !VillageStructureRegistry.get(level).isOwnedBy(pos, "storage_barrel")
+                        || !level.getBlockState(pos).is(net.minecraft.world.level.block.Blocks.BARREL)
+                        || !(level.getBlockEntity(pos) instanceof Container container)) continue;
                 for (int i = 0; i < container.getContainerSize(); i++) {
                     ItemStack stack = container.getItem(i);
                     if (matchesSlot(stack, slot)) {
