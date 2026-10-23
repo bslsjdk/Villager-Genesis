@@ -1,6 +1,7 @@
 package dev.villagergenesis.ai;
 
 import dev.villagergenesis.memory.VillagerMemory;
+import dev.villagergenesis.society.VillageRoleService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -11,7 +12,11 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.HoeItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -53,6 +58,14 @@ public final class VillageStarterShelterGoal extends Goal {
         }
 
         Container inventory = villager.getInventory();
+
+        // Shelter materials must not consume the founding resident's first tool/workbench budget.
+        // Resting on the ground remains available independently, so this is a priority guard,
+        // not a survival blocker.
+        if (!hasStarterTool(inventory) || !hasNearbyCraftingTable(level, villager.blockPosition())) {
+            return false;
+        }
+
         materialSlot = -1;
         buildingBlock = null;
         for (int i = 0; i < inventory.getContainerSize(); i++) {
@@ -121,6 +134,45 @@ public final class VillageStarterShelterGoal extends Goal {
         materialSlot = -1;
         travelTicks = 0;
         finished = false;
+    }
+
+    private boolean hasStarterTool(Container inventory) {
+        VillageRoleService.Role role = VillageRoleService.ensureRole(villager);
+        ItemStack held = villager.getMainHandItem();
+        if (isRoleTool(held, role)) return true;
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            if (isRoleTool(inventory.getItem(i), role)) return true;
+        }
+        // Non-tool roles can still build once the shared workbench exists.
+        return role != VillageRoleService.Role.FARMER
+                && role != VillageRoleService.Role.GATHERER
+                && role != VillageRoleService.Role.LUMBERJACK
+                && role != VillageRoleService.Role.MINER;
+    }
+
+    private boolean isRoleTool(ItemStack stack, VillageRoleService.Role role) {
+        if (stack.isEmpty() || stack.getDamageValue() >= stack.getMaxDamage()) return false;
+        return switch (role) {
+            case FARMER -> stack.getItem() instanceof HoeItem;
+            case GATHERER, LUMBERJACK -> stack.getItem() instanceof AxeItem;
+            case MINER -> stack.getItem() instanceof PickaxeItem;
+            default -> true;
+        };
+    }
+
+    private boolean hasNearbyCraftingTable(ServerLevel level, BlockPos origin) {
+        // Bounded scan over already-loaded chunks only; do not expand the world for a shelter.
+        for (int dy = -2; dy <= 3; dy++) {
+            for (int dx = -6; dx <= 6; dx++) {
+                for (int dz = -6; dz <= 6; dz++) {
+                    if (dx * dx + dz * dz > 36) continue;
+                    BlockPos pos = origin.offset(dx, dy, dz);
+                    if (level.hasChunkAt(pos)
+                            && level.getBlockState(pos).is(Blocks.CRAFTING_TABLE)) return true;
+                }
+            }
+        }
+        return false;
     }
 
     private BlockPos findSite(ServerLevel level, BlockPos origin) {
