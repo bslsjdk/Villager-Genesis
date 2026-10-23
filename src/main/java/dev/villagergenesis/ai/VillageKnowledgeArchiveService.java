@@ -1,17 +1,21 @@
 package dev.villagergenesis.ai;
 
+import dev.villagergenesis.knowledge.KnowledgeDefinition;
+import dev.villagergenesis.knowledge.KnowledgeRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.network.Filterable;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -39,8 +43,7 @@ public final class VillageKnowledgeArchiveService {
             Set<String> archived = readKnowledge(stack);
             if (archived.contains(knowledgeId)) return true;
             archived.add(knowledgeId);
-            writeKnowledge(stack, archived);
-            container.setChanged();
+            if (!writeKnowledge(container, slot, stack, archived)) return false;
             wrote[0] = true;
             return true;
         });
@@ -86,8 +89,27 @@ public final class VillageKnowledgeArchiveService {
         return result;
     }
 
-    private static void writeKnowledge(ItemStack stack, Set<String> ids) {
-        CompoundTag root = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+    private static boolean writeKnowledge(Container container, int slot, ItemStack original,
+                                          Set<String> ids) {
+        ItemStack archiveBook = original;
+        int destinationSlot = slot;
+        if (original.getCount() > 1) {
+            destinationSlot = -1;
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                if (i != slot && container.getItem(i).isEmpty()) {
+                    destinationSlot = i;
+                    break;
+                }
+            }
+            // Never destroy the remaining book stack to make room for an archive.
+            if (destinationSlot < 0) return false;
+            archiveBook = container.removeItem(slot, 1);
+            if (archiveBook.isEmpty()) return false;
+            archiveBook.setCount(1);
+        }
+
+        archiveBook.setItem(Items.WRITTEN_BOOK);
+        CompoundTag root = archiveBook.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         CompoundTag archive = root.contains(ARCHIVE_ROOT, Tag.TAG_COMPOUND)
                 ? root.getCompound(ARCHIVE_ROOT) : new CompoundTag();
         ListTag list = new ListTag();
@@ -95,10 +117,28 @@ public final class VillageKnowledgeArchiveService {
         archive.put(KNOWLEDGE_IDS, list);
         root.put(ARCHIVE_ROOT, archive);
         root.putBoolean(ARCHIVE_NAME, true);
-        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(root));
-        if (!stack.has(DataComponents.CUSTOM_NAME)) {
-            stack.set(DataComponents.CUSTOM_NAME, Component.literal("Village Knowledge Archive"));
+        archiveBook.set(DataComponents.CUSTOM_DATA, CustomData.of(root));
+        archiveBook.set(DataComponents.CUSTOM_NAME, Component.literal("Village Knowledge Archive"));
+
+        var pages = ids.stream().sorted()
+                .map(id -> Filterable.passThrough(Component.literal(formatKnowledgePage(id))))
+                .toList();
+        archiveBook.set(DataComponents.WRITTEN_BOOK_CONTENT,
+                new WrittenBookContent(Filterable.passThrough("Village Knowledge"),
+                        "Village Genesis", 0, pages, true));
+        container.setItem(destinationSlot, archiveBook);
+        container.setChanged();
+        return true;
+    }
+
+    private static String formatKnowledgePage(String id) {
+        KnowledgeDefinition definition = new KnowledgeRegistry().find(id).orElse(null);
+        if (definition == null) {
+            return "Village Knowledge\\n\\n" + id
+                    + "\\n\\nThis archived knowledge was recorded by a villager.";
         }
+        return definition.title() + "\\n\\n" + definition.description()
+                + "\\n\\nKnowledge ID: " + id;
     }
 
     private static boolean visitBooks(ServerLevel level, BlockPos center, int radius, BookVisitor visitor) {
