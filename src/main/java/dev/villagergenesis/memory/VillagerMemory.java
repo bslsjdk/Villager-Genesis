@@ -43,6 +43,7 @@ public final class VillagerMemory {
     private static final String ACTION_SUCCESSES = "action_successes";
     private static final String ACTION_FAILURES = "action_failures";
     private static final String ACTION_INTERRUPTS = "action_interrupts";
+    private static final String ACTION_OUTCOMES_BY_GOAL = "action_outcomes_by_goal";
 
     private final CompoundTag data;
 
@@ -178,7 +179,16 @@ public final class VillagerMemory {
         data.putLong(LAST_ACTION_AT, Math.max(0L, gameTime));
         String counter = "success".equals(result) ? ACTION_SUCCESSES
                 : "failure".equals(result) ? ACTION_FAILURES : ACTION_INTERRUPTS;
-        data.putInt(counter, data.getInt(counter) == Integer.MAX_VALUE ? Integer.MAX_VALUE : data.getInt(counter) + 1);
+        incrementSaturated(data, counter);
+
+        // Keep per-goal counts so one failed exploration cannot penalize unrelated goals.
+        CompoundTag allGoals = data.getCompound(ACTION_OUTCOMES_BY_GOAL);
+        CompoundTag goalOutcomes = allGoals.getCompound(goal);
+        String perGoalCounter = "success".equals(result) ? "successes"
+                : "failure".equals(result) ? "failures" : "interruptions";
+        incrementSaturated(goalOutcomes, perGoalCounter);
+        allGoals.put(goal, goalOutcomes);
+        data.put(ACTION_OUTCOMES_BY_GOAL, allGoals);
     }
 
     public String lastActionGoal() { return data.getString(LAST_ACTION_GOAL); }
@@ -188,6 +198,20 @@ public final class VillagerMemory {
     public int actionSuccesses() { return data.getInt(ACTION_SUCCESSES); }
     public int actionFailures() { return data.getInt(ACTION_FAILURES); }
     public int actionInterrupts() { return data.getInt(ACTION_INTERRUPTS); }
+
+    public int actionSuccessesFor(String goal) { return outcomeCount(goal, "successes"); }
+    public int actionFailuresFor(String goal) { return outcomeCount(goal, "failures"); }
+    public int actionInterruptsFor(String goal) { return outcomeCount(goal, "interruptions"); }
+
+    private int outcomeCount(String goal, String key) {
+        if (goal == null || goal.isBlank()) return 0;
+        return data.getCompound(ACTION_OUTCOMES_BY_GOAL).getCompound(goal).getInt(key);
+    }
+
+    private static void incrementSaturated(CompoundTag tag, String key) {
+        int value = tag.getInt(key);
+        tag.putInt(key, value == Integer.MAX_VALUE ? Integer.MAX_VALUE : value + 1);
+    }
 
     public Snapshot snapshot() {
         return snapshot(currentGoal());

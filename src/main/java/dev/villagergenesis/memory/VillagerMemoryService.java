@@ -6,6 +6,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.Villager;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Server-side adapter between live Minecraft villagers and the civilization simulation.
  * A stable UUID-based phase spreads observations across ticks instead of synchronizing every
@@ -44,8 +47,31 @@ public final class VillagerMemoryService {
         // from the executor-owned active-goal key, and always re-evaluate on scheduled observations
         // so an old "explore" goal cannot suppress an urgent retreat recommendation.
         String activeGoal = villager.getPersistentData().getString("villager_genesis_current_goal");
-        GoalPlanner.rankGoals(memory.snapshot(activeGoal), context).stream().findFirst().ifPresent(candidate ->
-                memory.recordSuggestion(candidate.goal(), candidate.score(), candidate.reason(), gameTime));
+        GoalPlanner.rankGoals(memory.snapshot(activeGoal), context, outcomeFeedback(memory, gameTime)).stream()
+                .findFirst().ifPresent(candidate ->
+                        memory.recordSuggestion(candidate.goal(), candidate.score(), candidate.reason(), gameTime));
         VillageKnowledgeSharingService.tryTeachOne(villager);
+    }
+
+    private static List<GoalPlanner.Feedback> outcomeFeedback(VillagerMemory memory, long gameTime) {
+        List<GoalPlanner.Feedback> feedback = new ArrayList<>();
+        String[] goals = {
+                "retreat", "seek_food", "seek_shelter", "learn",
+                "cooperate", "explore", "observe", "initialize"
+        };
+        for (String goal : goals) {
+            // The persistent aggregate counters are long-lived; the extra recency bonus/penalty
+            // must expire or a single old event would influence every future planning cycle.
+            long actionAge = gameTime - memory.lastActionAt();
+            boolean recent = actionAge >= 0 && actionAge <= 1_200;
+            String lastResult = recent && goal.equals(memory.lastActionGoal())
+                    ? memory.lastActionResult() : "";
+            feedback.add(new GoalPlanner.Feedback(goal,
+                    memory.actionSuccessesFor(goal),
+                    memory.actionFailuresFor(goal),
+                    memory.actionInterruptsFor(goal),
+                    lastResult));
+        }
+        return List.copyOf(feedback);
     }
 }

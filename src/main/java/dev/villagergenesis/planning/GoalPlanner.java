@@ -47,6 +47,41 @@ public final class GoalPlanner {
 
     public record Candidate(String goal, int score, String reason) {}
 
+    /**
+     * Per-goal observed outcomes. Counters are bounded before they affect ranking so a long-lived
+     * villager cannot let old history overwhelm urgent survival needs.
+     */
+    public record Feedback(
+            String goal,
+            int successes,
+            int failures,
+            int interruptions,
+            String lastResult
+    ) {
+        public Feedback {
+            goal = goal == null ? "" : goal;
+            successes = clamp(successes, 0, 4);
+            failures = clamp(failures, 0, 4);
+            interruptions = clamp(interruptions, 0, 4);
+            if (!"success".equals(lastResult) && !"failure".equals(lastResult)
+                    && !"interrupted".equals(lastResult)) {
+                lastResult = "";
+            }
+        }
+
+        public static Feedback none() {
+            return new Feedback("", 0, 0, 0, "");
+        }
+
+        private int scoreAdjustment() {
+            int adjustment = successes * 3 - failures * 5 - interruptions * 2;
+            if ("success".equals(lastResult)) adjustment += 3;
+            else if ("failure".equals(lastResult)) adjustment -= 4;
+            else if ("interrupted".equals(lastResult)) adjustment -= 1;
+            return clamp(adjustment, -24, 15);
+        }
+    }
+
     public static Optional<String> chooseGoal(VillagerMemory.Snapshot memory) {
         return chooseGoal(memory, Context.memoryOnly());
     }
@@ -59,8 +94,14 @@ public final class GoalPlanner {
 
     /** Returns candidates in deterministic score order, including concise reasons for debugging. */
     public static List<Candidate> rankGoals(VillagerMemory.Snapshot memory, Context context) {
+        return rankGoals(memory, context, List.of());
+    }
+
+    public static List<Candidate> rankGoals(
+            VillagerMemory.Snapshot memory, Context context, List<Feedback> feedback) {
         if (memory == null) return List.of();
         Context facts = context == null ? Context.memoryOnly() : context;
+        List<Feedback> outcomes = feedback == null ? List.of() : feedback;
         List<Candidate> candidates = new ArrayList<>();
 
         if (facts.threatLevel() >= URGENT_THREAT || facts.healthPercent() <= CRITICAL_HEALTH) {
@@ -90,10 +131,12 @@ public final class GoalPlanner {
                     "A nearby settlement makes coordination potentially useful."));
         }
 
-        if (memory.positionChanges() >= 25 && facts.threatLevel() < URGENT_THREAT) {
+        // Movement alone is not evidence of exploration need: vanilla work, panic, trading,
+        // and routine wandering all change position. Require an explicit exploration signal.
+        if (facts.explorationValue() >= 20 && facts.threatLevel() < URGENT_THREAT) {
             candidates.add(new Candidate("explore",
-                    35 + Math.min(100, memory.positionChanges()) / 10 + facts.explorationValue() / 2,
-                    "Repeated movement supports further exploration."));
+                    35 + facts.explorationValue() / 2,
+                    "An explicit exploration signal justifies checking the surrounding area."));
         }
 
         if (memory.observations() >= 5) {
@@ -107,6 +150,21 @@ public final class GoalPlanner {
         if (candidates.isEmpty()) {
             candidates.add(new Candidate("observe", 20,
                     "Gather more evidence because no higher-priority goal is justified."));
+        }
+
+        // Apply observed outcomes only to the same goal. This feedback is advisory and bounded;
+        // urgent candidates are never penalized by historical failures or interruptions.
+        for (int i = 0; i < candidates.size(); i++) {
+            Candidate candidate = candidates.get(i);
+            if (!isUrgent(candidate.goal())) {
+                int adjustment = outcomes.stream()
+                        .filter(outcome -> candidate.goal().equals(outcome.goal()))
+                        .findFirst().map(Feedback::scoreAdjustment).orElse(0);
+                if (adjustment != 0) {
+                    candidates.set(i, new Candidate(candidate.goal(), candidate.score() + adjustment,
+                            candidate.reason() + " Bounded outcome feedback adjusted this candidate."));
+                }
+            }
         }
 
         String current = memory.currentGoal();

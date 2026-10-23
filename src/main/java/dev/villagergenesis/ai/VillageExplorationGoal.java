@@ -95,6 +95,9 @@ public final class VillageExplorationGoal extends Goal {
 
     @Override
     public void stop() {
+        // Capture navigation state before stop() resets it, otherwise an early path termination
+        // becomes indistinguishable from a behavior that was preempted by another goal.
+        boolean navigationEnded = villager.getNavigation().isDone();
         villager.getNavigation().stop();
         if (villager.level() instanceof ServerLevel level) {
             long now = level.getGameTime();
@@ -108,11 +111,15 @@ public final class VillageExplorationGoal extends Goal {
             } else if (travelTicks >= MAX_TRAVEL_TICKS) {
                 VillagerMemory.forVillager(villager).recordActionOutcome("explore", "failure",
                         "Travel exceeded the exploration time budget.", now);
+            } else if (villager.getTarget() != null) {
+                VillagerMemory.forVillager(villager).recordActionOutcome("explore", "interrupted",
+                        "Exploration interrupted because a target appeared.", now);
+            } else if (navigationEnded) {
+                VillagerMemory.forVillager(villager).recordActionOutcome("explore", "failure",
+                        "Navigation ended before the safe waypoint was reached.", now);
             } else {
                 VillagerMemory.forVillager(villager).recordActionOutcome("explore", "interrupted",
-                        villager.getTarget() != null
-                                ? "Exploration interrupted because a target appeared."
-                                : "Exploration ended before reaching the waypoint.", now);
+                        "Exploration was preempted before reaching the waypoint.", now);
             }
         }
         villager.getPersistentData().putString("villager_genesis_current_goal", "observe");
