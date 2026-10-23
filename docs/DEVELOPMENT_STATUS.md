@@ -35,6 +35,8 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - New ordinary-resident escape goal avoids nearby hostile monsters without attacking: checks danger periodically, picks a clear escape destination with solid footing, checks all relevant chunks are already loaded, and records the outcome. Successful escapes teach only hostile-awareness knowledge.
 
 ## Latest validation
+
+- Commits 09f633ca65229eb7d3a53f05dea0f23714f86eb0 and 51bb7f1f6c63e5b068c881c5d21d915032e052b1 add and test the pure `SettlementStaffingStability` gate. It resets a stability window when the desired-role fingerprint changes, enforces a minimum stable duration and post-application cooldown, and records application time only after the caller confirms success. It is not yet connected to live settlement discovery, persistence, or role application.
 - Commit 96351d82c1b5722f68451d13c4417e7f8f7670fd: guard ranged code; Build run #281 / 40005431735 passed.
 - Commit eb738f8839d9f027a513004208d7023038e18c66: fallback to movement/close range when no real ammunition is available; Build run #284 / 40005548168 passed.
 - Commit 376fdea7b04a9e7c1acb4b2f763471b5ad32ad9c: added VillageResidentFleeGoal.
@@ -63,7 +65,7 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 1. Check Actions for the latest resident-escape correctness fix; fix any build/test failures.
 2. Review goal priority interactions and test escape behavior in Minecraft.
 3. Add deterministic tests for bounded destination selection and state transitions.
-4. Verify the new staffing planner tests, then add settlement-scoped roster discovery and safe, cooldown-limited application of staffing changes.
+4. Verify the new staffing planner and stability-gate tests, then add settlement-scoped roster discovery, persisted stability state, and safe application of staffing changes.
 5. Continue resource logistics, learning, and simulation.
 5. Keep CI and in-game validation status separate.
 
