@@ -161,3 +161,12 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - New, unassigned adult residents now try a bounded local bootstrap policy before UUID fallback: first observed founder is FARMER, the second complements a FARMER/GATHERER pair, and a third may become BUILDER if no nearby builder exists. It considers only already-loaded nearby villagers and never rewrites a saved role.
 - This mitigates the founding-pair role lottery, but it is not yet a settlement-owned roster allocator. Existing villagers keep old roles; radius-based local grouping may not match eventual settlement boundaries. A role is still not proof that its task can execute, and the lumberjack first-storage deadlock remains unresolved.
 - CI and in-game behavior for this change remain pending until verified.
+
+## Real starter crafting and wooden tools (2026-10-24)
+
+- Added `VillageBootstrapCraftingGoal`: eligible founding roles can convert a real carried vanilla log into four matching planks, then consume four real planks to craft one crafting table. No items are created without ingredients.
+- Added `VillageWorkbenchPlacementGoal`: a carried table is placed only on revalidated, empty, dry, supported ground in an already-loaded chunk. Nearby-workbench scans now use a bounded 8-block horizontal radius and a 100-tick scan throttle, including negative results, to reduce repeated per-villager block scans.
+- Added and registered `VillageToolCraftingGoal`: FARMER can craft/equip a wooden hoe; GATHERER/LUMBERJACK a wooden axe; MINER a wooden pickaxe. It consumes real planks and sticks and requires a nearby placed crafting table for new crafting. If a suitable tool already exists in inventory, it can equip that tool without crafting another.
+- Stick crafting is a separate goal pass: two real planks are consumed to produce four sticks, then a later pass crafts the tool. Tool crafting currently supports the wooden starter tier only; stone/iron upgrades, recipe-registry integration, crop-task tool gating, and settlement-wide resource reservations remain unfinished.
+- Runtime behavior and compilation are not yet confirmed by in-game testing. Treat this as implementation committed to the feature branch, not as a verified end-to-end bootstrap economy. Check GitHub Actions and then test a clean world with two newly spawned villagers.
+
