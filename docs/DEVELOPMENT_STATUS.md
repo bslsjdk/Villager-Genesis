@@ -36,6 +36,10 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 
 ## Latest validation
 
+- Commit 321ef46758cdde91e55fce923cb800f2bddcfbf0 fixes the invalid `Blocks.BED` reference in the seed-gathering protection check. CI run 40014123082 was running at last check; do not mark this build passed until Actions confirms it.
+- Commit 67bb09a17a6dece089d8a9152b28d5fb27efa0c adds `VillageFoodDeliveryGoal`: eligible farmers, gatherers, caretakers, and mayors can move real bread/carrots/potatoes/beetroots from their personal inventory into a nearby loaded chest, trapped chest, or barrel. It does not create food or load chunks. The goal is registered in `VillageAutonomyService`; compilation and in-game behavior remain unverified until CI and gameplay testing.
+
+
 - Commits 09f633ca65229eb7d3a53f05dea0f23714f86eb0 and 51bb7f1f6c63e5b068c881c5d21d915032e052b1 add and test the pure `SettlementStaffingStability` gate. It resets a stability window when the desired-role fingerprint changes, enforces a minimum stable duration and post-application cooldown, and records application time only after the caller confirms success. It is not yet connected to live settlement discovery, persistence, or role application.
 - Commit 96351d82c1b5722f68451d13c4417e7f8f7670fd: guard ranged code; Build run #281 / 40005431735 passed.
 - Commit eb738f8839d9f027a513004208d7023038e18c66: fallback to movement/close range when no real ammunition is available; Build run #284 / 40005548168 passed.
