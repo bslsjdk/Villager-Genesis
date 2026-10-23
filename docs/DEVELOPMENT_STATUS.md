@@ -105,6 +105,13 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - This provides a real wood acquisition path for later storage/shelter construction, but it does not yet guarantee the lumberjack is staffed when a new group has no saved role policy, or provide a container-free starter phase. Group-based staffing and resource surveying remain pending.
 
 
+## Founding wood bootstrap and first crafting stage (CI/gameplay pending)
+
+- Commit fdd4cf0293e27ac986b26bde704bc5d0930c1de8 adds `VillageBootstrapCraftingGoal`: eligible founding roles can process real carried logs into four matching planks, then consume four real planks to craft a crafting table. Outputs are inserted into the villager's real inventory; ingredient consumption precedes output and no items are synthesized.
+- Commit 605fc8c115638f0698078bac36968086a9edab8b registers this goal at priority 7.
+- This is only the first crafting stage. It does not yet place the crafting table, craft/equip tools, or gate farming/mining on tools. A carried crafting table also currently remains in inventory; placement is a required next step.
+- Vanilla recipe equivalence has been manually encoded for common vanilla log/plank families; this needs compile and gameplay validation. The build has not been confirmed successful.
+
 ## Founding wood bootstrap (source committed; CI/gameplay pending)
 
 - Commit 06d60dea4ecb5d8a32e74ad4100cca9cdeaeb87d changes the lumberjack goal so FARMER and GATHERER residents can perform the first bounded wood-gathering task instead of requiring a pre-existing specialist or learned flag.
