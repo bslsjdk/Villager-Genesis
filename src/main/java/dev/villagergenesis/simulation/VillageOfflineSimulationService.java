@@ -45,7 +45,7 @@ public final class VillageOfflineSimulationService {
         if (!graph.nodes().isEmpty()) {
             int nodeCount = graph.nodes().size();
             // Spend more on graph quality while small; taper work as the graph grows.
-            int adaptiveBudget = nodeCount < 32 ? 4 : nodeCount < 128 ? 2 : GRAPH_NODE_BUDGET;
+            int adaptiveBudget = nodeCount < 32 ? 4 : nodeCount < 128 ? 2 : 1;
             graph.rebuildLocalEdges(adaptiveBudget, GRAPH_NEIGHBOURS, now);
             advanceOneNode(level, graph, now);
         }
@@ -67,9 +67,7 @@ public final class VillageOfflineSimulationService {
         int x;
         int z;
         if (refine) {
-            List<SettlementNodeGraph.Node> ordered = new ArrayList<>(graph.nodes());
-            ordered.sort(java.util.Comparator.comparing(n -> n.id().toString()));
-            SettlementNodeGraph.Node anchor = ordered.get(Math.floorMod(cursor / 4, ordered.size()));
+            SettlementNodeGraph.Node anchor = chooseRefinementAnchor(graph.nodes(), cursor);
             int ring = 1 + (cursor / 32) % 4;
             int side = (cursor / 4) % directions.length;
             x = anchor.x() + directions[side][0] * ring * LOCAL_SPACING;
@@ -102,6 +100,41 @@ public final class VillageOfflineSimulationService {
         graph.addNode(id, x, z, level.getSeaLevel(), biome, terrainScore, now)
                 .updateTerrain(level.getSeaLevel(), biome, terrainScore, food, timber, stone);
         graph.markChanged();
+    }
+
+    /**
+     * Pick a refinement anchor using site quality, complementary resources, and local crowding.
+     * The cursor rotates deterministic tie-breaking so one high-scoring node cannot monopolize
+     * all refinement probes. This examines only the bounded abstract graph, never chunks.
+     */
+    private static SettlementNodeGraph.Node chooseRefinementAnchor(
+            List<SettlementNodeGraph.Node> nodes, int cursor) {
+        List<SettlementNodeGraph.Node> ordered = new ArrayList<>(nodes);
+        ordered.sort(java.util.Comparator.comparing(n -> n.id().toString()));
+        SettlementNodeGraph.Node best = ordered.get(Math.floorMod(cursor / 4, ordered.size()));
+        int bestScore = Integer.MIN_VALUE;
+
+        for (int i = 0; i < ordered.size(); i++) {
+            SettlementNodeGraph.Node candidate =
+                    ordered.get((i + Math.floorMod(cursor / 4, ordered.size())) % ordered.size());
+            int nearby = 0;
+            for (SettlementNodeGraph.Node other : ordered) {
+                if (candidate == other) continue;
+                long dx = (long) candidate.x() - other.x();
+                long dz = (long) candidate.z() - other.z();
+                if (dx * dx + dz * dz <= (long) GLOBAL_SPACING * GLOBAL_SPACING) nearby++;
+            }
+
+            int resourceScore = (candidate.foodPotential() + candidate.timberPotential()
+                    + candidate.stonePotential()) / 3;
+            // Quality/resources attract refinement; crowding redirects it toward less explored space.
+            int score = candidate.terrainScore() * 2 + resourceScore - nearby * 18;
+            if (score > bestScore) {
+                best = candidate;
+                bestScore = score;
+            }
+        }
+        return best;
     }
 
     private static int scoreBiome(String biome) {
