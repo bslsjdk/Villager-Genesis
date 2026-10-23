@@ -246,7 +246,7 @@ public final class LocalVillagerGroupTracker extends SavedData {
                         (int) (resident.getLeastSignificantBits() >>> 32),
                         (int) resident.getLeastSignificantBits()
                 };
-                members.add(net.minecraft.nbt.IntArrayTag.valueOf(raw));
+                members.add(new net.minecraft.nbt.IntArrayTag(raw));
             }
             entry.put("members", members);
             list.add(entry);
