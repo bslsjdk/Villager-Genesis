@@ -40,6 +40,12 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
 }
 
+// NeoForge's Minecraft artifacts are attached to the main source set by ModDev rather than
+// published as ordinary implementation dependencies. Tests that exercise SavedData/NBT need
+// those same mapped classes on both their compile and runtime classpaths.
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
+
 test {
     useJUnitPlatform()
 }

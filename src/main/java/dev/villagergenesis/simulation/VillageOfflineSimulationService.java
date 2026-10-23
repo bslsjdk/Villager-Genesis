@@ -27,6 +27,7 @@ public final class VillageOfflineSimulationService {
     private static final int GRAPH_NEIGHBOURS = 3;
     private static final Map<ServerLevel, Long> NEXT_LEVEL_STEP = new WeakHashMap<>();
     private static final Map<ServerLevel, Integer> ROUND_ROBIN = new WeakHashMap<>();
+    private static final Map<ServerLevel, Integer> TERRAIN_REFRESH_CURSOR = new WeakHashMap<>();
 
     private VillageOfflineSimulationService() {}
 
@@ -42,7 +43,9 @@ public final class VillageOfflineSimulationService {
         }
 
         SettlementNodeGraph graph = SettlementNodeGraph.get(level);
+        SettlementTaskQueue queue = SettlementTaskQueue.get(level);
         seedOneCandidate(level, graph, now);
+        refreshOneLoadedEstimate(level, graph);
         if (!graph.nodes().isEmpty()) {
             int nodeCount = graph.nodes().size();
             // Spend more on graph quality while small; taper work as the graph grows.
@@ -50,6 +53,48 @@ public final class VillageOfflineSimulationService {
             graph.rebuildLocalEdges(adaptiveBudget, GRAPH_NEIGHBOURS, now);
             advanceOneNode(level, graph, now);
         }
+        // Process at most one persistent abstract plan per scheduler step. This is data-only.
+        SettlementPlanningService.processOne(graph, queue, now);
+    }
+
+
+    /**
+     * Upgrade one previously estimated node when its chunk is already loaded for other reasons.
+     * The single hasChunkAt gate dominates every terrain API in this refresh path.
+     */
+    private static void refreshOneLoadedEstimate(ServerLevel level, SettlementNodeGraph graph) {
+        List<SettlementNodeGraph.Node> nodes = graph.nodes();
+        if (nodes.isEmpty()) return;
+        SettlementNodeGraph.Node candidate = null;
+        synchronized (TERRAIN_REFRESH_CURSOR) {
+            int start = Math.floorMod(TERRAIN_REFRESH_CURSOR.getOrDefault(level, 0), nodes.size());
+            for (int offset = 0; offset < nodes.size(); offset++) {
+                SettlementNodeGraph.Node node = nodes.get((start + offset) % nodes.size());
+                String biome = node.biomeId();
+                if ("unobserved".equals(biome) || "unknown".equals(biome)) {
+                    candidate = node;
+                    TERRAIN_REFRESH_CURSOR.put(level, (start + offset + 1) % nodes.size());
+                    break;
+                }
+            }
+        }
+        if (candidate == null) return;
+
+        BlockPos samplePos = new BlockPos(candidate.x(), 0, candidate.z());
+        if (!level.hasChunkAt(samplePos)) return;
+
+        // Both terrain queries remain below the loaded-chunk gate. Sample the biome at
+        // the surface height rather than Y=0, which may be a cave biome in modern worlds.
+        int estimatedY = level.getHeight(Heightmap.Types.WORLD_SURFACE, candidate.x(), candidate.z());
+        BlockPos surfacePos = new BlockPos(candidate.x(), estimatedY, candidate.z());
+        String biome = level.getBiome(surfacePos).unwrapKey()
+                .map(holder -> holder.location().toString()).orElse("unknown");
+        int terrainScore = scoreBiome(biome);
+        int food = biome.contains("plains") || biome.contains("meadow") || biome.contains("river") ? 75 : 40;
+        int timber = biome.contains("forest") || biome.contains("taiga") || biome.contains("grove") ? 80 : 35;
+        int stone = biome.contains("mountain") || biome.contains("windswept") || biome.contains("stony") ? 80 : 45;
+        candidate.updateTerrain(estimatedY, biome, terrainScore, food, timber, stone);
+        graph.markChanged();
     }
 
     /**
@@ -105,10 +150,12 @@ public final class VillageOfflineSimulationService {
             return;
         }
 
-        // Every terrain query is below the loaded-chunk gate.
-        String biome = level.getBiome(samplePos).unwrapKey()
-                .map(holder -> holder.location().toString()).orElse("unknown");
+        // Every terrain query is below the loaded-chunk gate. Sample the surface biome,
+        // not the Y=0 cave layer.
         int estimatedY = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+        BlockPos surfacePos = new BlockPos(x, estimatedY, z);
+        String biome = level.getBiome(surfacePos).unwrapKey()
+                .map(holder -> holder.location().toString()).orElse("unknown");
         int terrainScore = scoreBiome(biome);
         if (terrainScore < 20) return;
 
@@ -208,21 +255,45 @@ public final class VillageOfflineSimulationService {
         }
     }
 
-    /** Bounded, abstract-only progression. No real inventory or world state is modified. */
-    private static void simulateDataOnly(SettlementNodeGraph.Node node, long now) {
+    /**
+     * One abstract economy step. All values are estimates, not real items or inventories.
+     * Food production/consumption is explicit, and population can only grow when reserves
+     * cover the growth cost. Specialization changes production without touching the world.
+     */
+    static void simulateDataOnly(SettlementNodeGraph.Node node, long now) {
         int population = node.population();
-        int food = node.foodReserve();
-        int materials = node.materials();
+        long food = node.foodReserve();
+        long materials = node.materials();
         if (population == 0) population = 4;
-        if (food > 0 && food < population * 8) {
-            population = Math.max(1, population - 1);
-        } else if (food >= population * 16 && population < 64) {
-            population += 1;
-            food -= population * 2;
+
+        int foodProduction = node.foodPotential() / 5;
+        if ("AGRICULTURE".equals(node.planningRole())) foodProduction += 4;
+        if ("TRADE".equals(node.planningRole())) foodProduction += 1;
+        long foodConsumption = (long) population * 2L;
+        food = Math.max(0L, Math.min(1_000_000_000L, food + foodProduction - foodConsumption));
+
+        if (food < (long) population * 2L && population > 4) {
+            population--;
+        } else if (food >= (long) population * 8L && population < 256) {
+            population++;
+            food = Math.max(0L, food - (long) population * 2L);
         }
-        // Potential influences only abstract planning estimates; these are not real items.
-        if (food == 0 && node.foodPotential() >= 60) food = Math.min(100, node.foodPotential() / 3);
-        node.setEstimates(population, food, materials, node.knowledgeFlags(), node.pendingTasks());
+
+        int materialProduction = Math.max(0, (node.timberPotential() + node.stonePotential()) / 25 - 2);
+        if ("FORESTRY".equals(node.planningRole()) || "STONEWORK".equals(node.planningRole())) {
+            materialProduction += 2;
+        }
+        if ("TRADE".equals(node.planningRole())) materialProduction += 1;
+        materials = Math.min(1_000_000_000L, materials + (long) materialProduction * Math.min(population, 20) / 4L);
+
+        node.setEstimates(population, (int) food, (int) materials,
+                node.knowledgeFlags(), node.pendingTasks());
+        SettlementNodeGraph.Kind kind = population >= 128 ? SettlementNodeGraph.Kind.CAPITAL
+                : population >= 64 ? SettlementNodeGraph.Kind.CITY
+                : population >= 24 ? SettlementNodeGraph.Kind.TOWN
+                : population >= 8 ? SettlementNodeGraph.Kind.VILLAGE
+                : SettlementNodeGraph.Kind.CAMP;
+        node.setKind(kind);
         node.advance(now, now + SCHEDULER_INTERVAL);
     }
 }
