@@ -37,6 +37,8 @@ public final class VillageAutonomyService {
             villager.goalSelector.addGoal(8, new VillageFarmlandPreparationGoal(villager));
             // Plant only real seeds and harvest only crops this villager recorded planting.
             villager.goalSelector.addGoal(8, new VillageCropWorkGoal(villager));
+            // Founders with no seeds may gather only actual grass loot before the crop loop starts.
+            villager.goalSelector.addGoal(8, new VillageSeedGatheringGoal(villager));
             villager.goalSelector.addGoal(7, new VillageWorkbenchPlacementGoal(villager));
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
             // Lumberjacks turn naturally grown trees into real stored building material.
