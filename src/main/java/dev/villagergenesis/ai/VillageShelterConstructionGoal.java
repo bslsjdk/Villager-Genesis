@@ -225,7 +225,10 @@ public final class VillageShelterConstructionGoal extends Goal {
         container.setChanged();
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, site.getX() + 0.5D,
                 site.getY() + 1.0D, site.getZ() + 0.5D, 24, 1.0D, 0.7D, 1.0D, 0.03D);
-        level.playSound(null, site, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 0.8F, 0.9F);
+        level.playSound(null, site,
+                VillageRoleService.roleOf(villager) == VillageRoleService.Role.MASON
+                        ? SoundEvents.STONE_PLACE : SoundEvents.WOOD_PLACE,
+                SoundSource.BLOCKS, 0.8F, 0.9F);
         villager.getPersistentData().putInt("villager_genesis_shelters_built",
                 villager.getPersistentData().getInt("villager_genesis_shelters_built") + 1);
         VillageStructureRegistry registry = VillageStructureRegistry.get(level);
@@ -234,7 +237,9 @@ public final class VillageShelterConstructionGoal extends Goal {
             registry.registerPlacedBlock(pos, structureType, villager.getUUID(), level.getGameTime());
         }
         VillagerMemory.forVillager(villager).recordActionOutcome("build_shelter", "success",
-                "Built a 3x3 oak shelter from 33 real planks taken from village storage.", level.getGameTime());
+                VillageRoleService.roleOf(villager) == VillageRoleService.Role.MASON
+                        ? "Built a cobblestone shelter using 33 real blocks from village storage."
+                        : "Built an oak shelter using 33 real planks from village storage.", level.getGameTime());
         VillagerMemory.forVillager(villager).learnKnowledge("shelter_construction");
     }
 
