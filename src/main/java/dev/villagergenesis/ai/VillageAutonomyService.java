@@ -20,7 +20,9 @@ public final class VillageAutonomyService {
         if (!(entity instanceof Villager villager) || event.getLevel().isClientSide) return;
         synchronized (INSTALLED) {
             if (INSTALLED.containsKey(villager)) return;
-            villager.goalSelector.addGoal(8, new VillageStorageConstructionGoal(villager));
+            // Let a concrete, resource-backed build preempt idle wandering, but not urgent
+            // vanilla behaviors such as panic, sleeping, or job-site work.
+            villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
             villager.goalSelector.addGoal(9, new VillageExplorationGoal(villager));
             INSTALLED.put(villager, Boolean.TRUE);
         }
