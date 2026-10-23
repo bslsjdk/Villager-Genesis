@@ -95,7 +95,7 @@ public final class VillageEconomy {
     /** Food items are normalized to abstract food units by the world adapter. */
     public int availableFoodUnits() {
         return stock(Resource.BREAD) + stock(Resource.CARROTS) + stock(Resource.POTATOES)
-                + stock(Resource.BEETROOT) + stock(Resource.WHEAT);
+                + stock(Resource.BEETROOT);
     }
 
     public double estimatedFoodDays() {
