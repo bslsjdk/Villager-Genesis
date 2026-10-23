@@ -1,6 +1,7 @@
 package dev.villagergenesis.ai;
 
 import dev.villagergenesis.economy.VisibleStorageScanner;
+import dev.villagergenesis.society.VillageRoleService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -64,6 +65,13 @@ public final class VillageStorageConstructionGoal extends Goal {
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
                 || !villager.getNavigation().isDone()) return false;
+
+        // Storage expansion is a social responsibility, not a job every villager competes for.
+        // Keep the mayor as a fallback for small settlements with no available caretaker/crafter.
+        VillageRoleService.Role role = VillageRoleService.ensureRole(villager);
+        if (role != VillageRoleService.Role.CRAFTER
+                && role != VillageRoleService.Role.CARETAKER
+                && role != VillageRoleService.Role.MAYOR) return false;
 
         long now = level.getGameTime();
         scanRegionKey = (((long) (villager.blockPosition().getX() >> 5)) << 32)
