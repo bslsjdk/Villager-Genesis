@@ -132,3 +132,9 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - The staffing policy remains a pure planner. It does not yet override the one-time UUID-based initial role assignment, so this change is not evidence that two newly spawned villagers will immediately receive the ideal jobs in-game.
 - Early survival should be opportunistic rather than over-specialized: gatherers may eventually perform safe, bounded resource tasks when there are only one or two residents; dedicated hunter/herder roles should become worthwhile only when population and actual nearby resources can support specialization.
 - Hunting behavior is still pending. A future sheep-harvesting goal must use actual vanilla animal drops, avoid animals clearly inside player-built pens, apply cooldowns and a small local wildlife quota, and never spawn replacement drops or animals.
+
+
+## Housing inventory survey follow-up (2026-10-24)
+- Added separate real-storage categories for planks, beds, and each of the 16 vanilla wool colours in `VisibleStorageScanner`. Mixed-colour wool is not incorrectly combined into a usable bed recipe stock.
+- Added snapshot helpers for largest same-colour wool stock, total planks, and existing beds. These are survey primitives only; the live settlement housing loop still does not consume items, craft/place beds, or reserve stock.
+- CI and in-game status for these latest commits must be checked separately. No in-game validation has been performed.
