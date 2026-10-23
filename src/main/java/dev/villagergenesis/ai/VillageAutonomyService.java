@@ -23,6 +23,8 @@ public final class VillageAutonomyService {
             if (INSTALLED.containsKey(villager)) return;
             // Social identity is mod-owned and independent of the vanilla profession.
             VillageRoleService.ensureRole(villager);
+            // Only assigned guards receive the mod-owned hostile-mob combat behavior.
+            villager.goalSelector.addGoal(2, new VillageGuardCombatGoal(villager));
             // Real construction may preempt farming, but urgent vanilla behaviors retain priority.
             villager.goalSelector.addGoal(6, new VillageEquipmentGoal(villager));
             villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
