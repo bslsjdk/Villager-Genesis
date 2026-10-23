@@ -78,14 +78,6 @@ public final class VillageToolCraftingGoal extends Goal {
             return;
         }
         Container inventory = villager.getInventory();
-        int existingToolSlot = findToolSlot(inventory, desiredTool);
-        if (existingToolSlot >= 0) {
-            equipFromInventory(inventory, existingToolSlot, level);
-            finish(level);
-            finished = true;
-            return;
-        }
-
         // Preserve held seeds, food, and other items before equipping a crafted tool.
         ItemStack held = villager.getMainHandItem();
         if (!held.isEmpty() && !isMatchingTool(held, desiredTool)) {
@@ -96,6 +88,14 @@ public final class VillageToolCraftingGoal extends Goal {
             }
             villager.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
             inventory.setChanged();
+        }
+
+        int existingToolSlot = findToolSlot(inventory, desiredTool);
+        if (existingToolSlot >= 0) {
+            equipFromInventory(inventory, existingToolSlot, level);
+            finish(level);
+            finished = true;
+            return;
         }
 
         int planksNeeded = plankCost(desiredTool);
