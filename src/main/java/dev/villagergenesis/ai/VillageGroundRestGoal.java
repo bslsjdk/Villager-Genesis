@@ -72,7 +72,16 @@ public final class VillageGroundRestGoal extends Goal {
             return;
         }
         travelTicks++;
-        if (!level.hasChunkAt(restSite) || travelTicks > 160) return;
+        if (!level.hasChunkAt(restSite) || travelTicks > 160) {
+            wake();
+            restSite = null;
+            return;
+        }
+        if (hasNearbyBed(level, villager.blockPosition())) {
+            wake();
+            restSite = null;
+            return;
+        }
         if (villager.blockPosition().distSqr(restSite) <= 2.25D) {
             if (!isSafeRestSite(level, restSite)) return;
             villager.getNavigation().stop();
@@ -92,7 +101,8 @@ public final class VillageGroundRestGoal extends Goal {
     @Override
     public boolean canContinueToUse() {
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
-                || restSite == null || !isNight(level) || villager.getTarget() != null) return false;
+                || restSite == null || !isNight(level) || villager.getTarget() != null
+                || hasNearbyBed(level, villager.blockPosition())) return false;
         return !isThreatNearby(level, villager.blockPosition(), 8);
     }
 
@@ -175,7 +185,9 @@ public final class VillageGroundRestGoal extends Goal {
         if (isThreatNearby(level, feet, 8)) return false;
         AABB body = new AABB(feet.getX(), feet.getY(), feet.getZ(),
                 feet.getX() + 1.0D, feet.getY() + 2.0D, feet.getZ() + 1.0D);
-        return level.getEntities(villager, body, entity -> entity.isAlive()).isEmpty();
+        // Nearby residents may share a resting area; only non-villager collidable entities block it.
+        return level.getEntities(villager, body,
+                entity -> entity.isAlive() && entity.isPickable() && !(entity instanceof Villager)).isEmpty();
     }
 
     private boolean isThreatNearby(ServerLevel level, BlockPos pos, int radius) {
