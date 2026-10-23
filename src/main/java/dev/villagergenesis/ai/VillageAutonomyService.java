@@ -20,7 +20,8 @@ public final class VillageAutonomyService {
         if (!(entity instanceof Villager villager) || event.getLevel().isClientSide) return;
         synchronized (INSTALLED) {
             if (INSTALLED.containsKey(villager)) return;
-            villager.goalSelector.addGoal(8, new VillageExplorationGoal(villager));
+            villager.goalSelector.addGoal(8, new VillageStorageConstructionGoal(villager));
+            villager.goalSelector.addGoal(9, new VillageExplorationGoal(villager));
             INSTALLED.put(villager, Boolean.TRUE);
         }
     }
