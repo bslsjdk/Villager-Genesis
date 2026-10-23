@@ -288,6 +288,7 @@ public final class VillageStorageConstructionGoal extends Goal {
             container.setChanged();
             return;
         }
+        VillageStructureRegistry.get(level).registerPlacedBlock(destination, "storage_barrel", villager.getUUID(), level.getGameTime());
         container.setChanged();
         villager.getPersistentData().putInt("villager_genesis_storage_builds",
                 villager.getPersistentData().getInt("villager_genesis_storage_builds") + 1);
