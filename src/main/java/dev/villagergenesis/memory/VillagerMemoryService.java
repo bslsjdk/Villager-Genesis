@@ -40,10 +40,13 @@ public final class VillagerMemoryService {
         GoalPlanner.Context context = new GoalPlanner.Context(
                 threatEstimate, healthPercent, 3650.0,
                 true, false, false, 0, Math.min(100, memory.observations()));
-        String activeGoal = villager.getPersistentData().getString("villager_genesis_current_goal");
-        if (!"expand_storage".equals(activeGoal) && !"explore".equals(activeGoal)) {
-            GoalPlanner.chooseGoal(memory.snapshot(), context).ifPresent(memory::setCurrentGoal);
-        }
+        // Planner output is a suggestion, not proof that an action started. Keep it separate
+        // from the executor-owned active-goal key, and always re-evaluate on scheduled observations
+        // so an old "explore" goal cannot suppress an urgent retreat recommendation.
+        GoalPlanner.rankGoals(memory.snapshot(), context).stream().findFirst().ifPresent(candidate -> {
+            memory.recordSuggestion(candidate.goal(), candidate.score(), candidate.reason(), gameTime);
+            memory.setCurrentGoal(candidate.goal());
+        });
         VillageKnowledgeSharingService.tryTeachOne(villager);
     }
 }
