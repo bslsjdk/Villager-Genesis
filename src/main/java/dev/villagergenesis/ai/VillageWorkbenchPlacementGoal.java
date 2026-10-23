@@ -20,6 +20,8 @@ import java.util.EnumSet;
 /** Places a carried, genuinely crafted crafting table on safe, empty ground in loaded terrain. */
 public final class VillageWorkbenchPlacementGoal extends Goal {
     private static final String NEXT_TRY = "villager_genesis_next_workbench_place";
+    private static final String NEXT_SCAN = "villager_genesis_next_workbench_scan";
+    private static final int SCAN_COOLDOWN_TICKS = 100;
     private static final int COOLDOWN_TICKS = 200;
     private static final int MAX_TRAVEL_TICKS = 160;
     private final Villager villager;
@@ -39,6 +41,10 @@ public final class VillageWorkbenchPlacementGoal extends Goal {
                 || !villager.getNavigation().isDone()
                 || level.getGameTime() < villager.getPersistentData().getLong(NEXT_TRY)
                 || !hasCarriedTable()) return false;
+        // Negative scans are throttled too: without this, every idle villager could inspect
+        // thousands of blocks every AI tick while carrying a table but lacking a valid site.
+        if (level.getGameTime() < villager.getPersistentData().getLong(NEXT_SCAN)) return false;
+        villager.getPersistentData().putLong(NEXT_SCAN, level.getGameTime() + SCAN_COOLDOWN_TICKS);
         if (hasNearbyWorkbench(level, villager.blockPosition())) return false;
         site = findSite(level, villager.blockPosition());
         return site != null;
@@ -93,9 +99,17 @@ public final class VillageWorkbenchPlacementGoal extends Goal {
     }
 
     private boolean hasNearbyWorkbench(ServerLevel level, BlockPos origin) {
-        for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-12, -4, -12), origin.offset(12, 4, 12))) {
-            if (!level.hasChunkAt(pos)) continue;
-            if (level.getBlockState(pos).is(Blocks.CRAFTING_TABLE)) return true;
+        // A nearby table is enough for a starter workshop. Keep this local and bounded;
+        // larger settlement-wide discovery belongs in the shared survey/index, not per villager.
+        int radius = 8;
+        for (int dy = -3; dy <= 3; dy++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (dx * dx + dz * dz > radius * radius) continue;
+                    BlockPos pos = origin.offset(dx, dy, dz);
+                    if (level.hasChunkAt(pos) && level.getBlockState(pos).is(Blocks.CRAFTING_TABLE)) return true;
+                }
+            }
         }
         return false;
     }
