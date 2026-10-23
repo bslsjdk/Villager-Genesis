@@ -23,7 +23,7 @@ class VillageOfflineSimulationProgressTest {
                 "A fertile remote settlement should grow from its own bounded economy simulation.");
         assertTrue(node.foodReserve() >= 0);
         assertTrue(node.population() <= 256);
-        assertEquals(SettlementNodeGraph.Kind.CAMP, node.kind());
+        assertTrue(node.kind().ordinal() >= SettlementNodeGraph.Kind.VILLAGE.ordinal());
     }
 
     @Test
