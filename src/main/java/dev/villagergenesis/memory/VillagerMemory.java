@@ -1,9 +1,15 @@
 package dev.villagergenesis.memory;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.core.BlockPos;
+import dev.villagergenesis.knowledge.KnowledgeBaseline;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Small persistent memory attached to a villager through NeoForge's entity persistent data.
@@ -25,6 +31,7 @@ public final class VillagerMemory {
     private static final String LAST_Z = "last_z";
     private static final String LAST_DIMENSION = "last_dimension";
     private static final String CURRENT_GOAL = "current_goal";
+    private static final String KNOWN_KNOWLEDGE = "known_knowledge";
 
     private final CompoundTag data;
 
@@ -54,6 +61,14 @@ public final class VillagerMemory {
             memory.putInt(LAST_Z, pos.getZ());
             memory.putString(LAST_DIMENSION, villager.level().dimension().location().toString());
             memory.putString(CURRENT_GOAL, "observe");
+        }
+
+        if (!memory.contains(KNOWN_KNOWLEDGE, Tag.TAG_LIST)) {
+            ListTag knowledge = new ListTag();
+            for (String id : KnowledgeBaseline.existingVillageKnowledge()) {
+                knowledge.add(StringTag.valueOf(id));
+            }
+            memory.put(KNOWN_KNOWLEDGE, knowledge);
         }
 
         return new VillagerMemory(memory);
@@ -91,6 +106,31 @@ public final class VillagerMemory {
 
     public int positionChanges() {
         return data.getInt(POSITION_CHANGES);
+    }
+
+    /** Knowledge IDs currently stored on this villager. */
+    public Set<String> knownKnowledge() {
+        Set<String> result = new LinkedHashSet<>();
+        ListTag knowledge = data.getList(KNOWN_KNOWLEDGE, Tag.TAG_STRING);
+        for (int i = 0; i < knowledge.size(); i++) {
+            result.add(knowledge.getString(i));
+        }
+        return Set.copyOf(result);
+    }
+
+    /** Add knowledge after it has been taught or verified through practical experience. */
+    public void learnKnowledge(String knowledgeId) {
+        if (knowledgeId == null || knowledgeId.isBlank()) {
+            throw new IllegalArgumentException("Knowledge id must not be blank.");
+        }
+        ListTag knowledge = data.getList(KNOWN_KNOWLEDGE, Tag.TAG_STRING);
+        for (int i = 0; i < knowledge.size(); i++) {
+            if (knowledgeId.equals(knowledge.getString(i))) {
+                return;
+            }
+        }
+        knowledge.add(StringTag.valueOf(knowledgeId));
+        data.put(KNOWN_KNOWLEDGE, knowledge);
     }
 
     public String currentGoal() {
