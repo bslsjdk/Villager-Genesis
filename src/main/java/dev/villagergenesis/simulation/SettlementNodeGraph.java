@@ -47,6 +47,7 @@ public final class SettlementNodeGraph extends SavedData {
         private int pendingTasks;
         private Kind kind;
         private State state;
+        private String planningRole = "BALANCED";
         private long lastSimulated;
         private long nextSimulation;
 
@@ -78,6 +79,7 @@ public final class SettlementNodeGraph extends SavedData {
         public int pendingTasks() { return pendingTasks; }
         public Kind kind() { return kind; }
         public State state() { return state; }
+        public String planningRole() { return planningRole; }
         public long lastSimulated() { return lastSimulated; }
         public long nextSimulation() { return nextSimulation; }
         public BlockPos estimatedPosition() { return new BlockPos(x, estimatedY, z); }
@@ -92,6 +94,9 @@ public final class SettlementNodeGraph extends SavedData {
         }
         public void setState(State value) { state = value; }
         public void setKind(Kind value) { kind = value; }
+        public void setPlanningRole(String value) {
+            planningRole = value == null || value.isBlank() ? "BALANCED" : value;
+        }
         public void setEstimates(int people, int food, int supplies, int knowledge, int tasks) {
             population = clamp(people, 0, 1_000_000);
             foodReserve = clamp(food, 0, 1_000_000_000);
@@ -282,6 +287,7 @@ public final class SettlementNodeGraph extends SavedData {
             n.pendingTasks = Math.max(0, e.getInt("tasks"));
             n.kind = enumValue(Kind.values(), e.getInt("kind"), Kind.CAMP);
             n.state = enumValue(State.values(), e.getInt("state"), State.ABSTRACT);
+            n.setPlanningRole(e.getString("planning_role"));
             n.nextSimulation = Math.max(n.lastSimulated, e.getLong("next"));
             graph.nodes.put(n.id, n);
         }
@@ -317,6 +323,7 @@ public final class SettlementNodeGraph extends SavedData {
             e.putInt("food_reserve", n.foodReserve); e.putInt("materials", n.materials);
             e.putInt("knowledge", n.knowledgeFlags); e.putInt("tasks", n.pendingTasks);
             e.putInt("kind", n.kind.ordinal()); e.putInt("state", n.state.ordinal());
+            e.putString("planning_role", n.planningRole);
             e.putLong("last", n.lastSimulated); e.putLong("next", n.nextSimulation);
             nodeList.add(e);
         }
