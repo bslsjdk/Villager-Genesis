@@ -157,8 +157,8 @@ public final class VillageShelterConstructionGoal extends Goal {
                     }
                 }
                 if (!clear) continue;
-                if (!level.getEntities(villager, new AABB(center.offset(-1, 0, -1),
-                        center.offset(2, 3, 2)), entity -> entity.isAlive()).isEmpty()) continue;
+                if (!level.getEntities(villager, new AABB(center.getX() - 1, center.getY(), center.getZ() - 1,
+                        center.getX() + 2, center.getY() + 4, center.getZ() + 2), entity -> entity.isAlive()).isEmpty()) continue;
                 return center.immutable();
             }
         }
