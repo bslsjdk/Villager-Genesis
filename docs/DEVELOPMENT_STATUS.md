@@ -25,7 +25,7 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 
 ## Existing foundations (source exists; not all in-game verified)
 - Knowledge prerequisite graph with cycle prevention; villager memory records knowledge, outcomes, and suggestions.
-- Roles include FARMER, BUILDER, GATHERER, CRAFTER, MINER, LUMBERJACK, MAYOR, MASON, GUARD, SCOUT, CARETAKER. Assignment is still UUID-based, not demand-based staffing.
+- Roles include FARMER, BUILDER, GATHERER, CRAFTER, MINER, LUMBERJACK, MAYOR, MASON, GUARD, SCOUT, CARETAKER. Runtime assignment is still UUID-based. A new side-effect-free RoleStaffingPlanner now proposes deterministic assignments from explicit staffing targets, incumbent roles, skill scores, and vanilla-profession fit; it is not yet wired into world/settlement membership.
 - Visible storage scanning covers ordinary chests, trapped chests, and barrels in loaded chunks, with bounded radius (maximum 24).
 - BUILDER shelter construction consumes 33 real oak planks; MASON shelter construction consumes 33 real cobblestone. Placement is validated and rollback attempted on failure.
 - Storage expansion is limited to CRAFTER, CARETAKER, MAYOR.
@@ -41,7 +41,8 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Commit 4ff7c281beb599661946c217869729c86f8b1cd6: installed resident escape behavior in VillageAutonomyService.
 - Commit 9b459216e980f3eb0a8a9ec71c502ee78e57c79a: records hostile-awareness knowledge only after a successful escape.
 - Commit f7644a1d2a38a1f023f0bf64890132b49dfc3e42: Build run #294 / 40005844030 passed, including Build and test and JAR upload.
-- Follow-up correctness fix afdca3579f2acb8d7c4389c0e2510e4211806e67: a threat disappearing no longer counts as a successful escape or grants hostile-awareness knowledge. Its own CI run must still be checked.
+- Follow-up correctness fix afdca3579f2acb8d7c4389c0e2510e4211806e67: a threat disappearing no longer counts as a successful escape or grants hostile-awareness knowledge. CI run #296 / 40006359081 was still running at last check.
+- Commits 244cdf64aee045a291835804de8d1e916be0d69f and 9d7babdc8513a61f8de70a700767880122090e38 add a deterministic, side-effect-free role staffing proposal engine and unit tests. CI run #297 / 40006433741 was still running at last check; runtime integration is not implemented.
 - No guard combat or resident escape behavior has been tested in a running Minecraft world.
 
 ## Unfinished work that must not be forgotten
@@ -52,7 +53,7 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 5. Implement durability-aware equipment maintenance and replacement only from real available supplies.
 6. Coordinate guards so protection is distributed rather than every guard pursuing the same target; define defense radius and posting behavior.
 7. Improve after-event learning based on observed outcomes, not arbitrary skill grants.
-8. Replace static UUID role assignment with staffing based on population, skills, vanilla profession, and settlement needs.
+8. Wire RoleStaffingPlanner into settlement-scoped membership and periodic staffing decisions; add hysteresis/cooldowns so roles do not oscillate when needs fluctuate. Keep role assignment changes explicit and persistent.
 9. Implement real gathering, crafting, logistics, mentorship/knowledge transfer, and career mobility without duplicating vanilla systems.
 10. Settlement simulation (food, housing, population, territory, diplomacy, etc.) remains incomplete; do not claim otherwise based on metadata alone.
 11. Regression-check scan frequency, cooldowns, goal interruption, inventory races, persistence, loaded-chunk safety, and player-build protection.
@@ -61,7 +62,8 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 1. Check Actions for the latest resident-escape correctness fix; fix any build/test failures.
 2. Review goal priority interactions and test escape behavior in Minecraft.
 3. Add deterministic tests for bounded destination selection and state transitions.
-4. Continue settlement staffing, resource logistics, learning, and simulation.
+4. Verify the new staffing planner tests, then add settlement-scoped roster discovery and safe, cooldown-limited application of staffing changes.
+5. Continue resource logistics, learning, and simulation.
 5. Keep CI and in-game validation status separate.
 
 ## Status language
