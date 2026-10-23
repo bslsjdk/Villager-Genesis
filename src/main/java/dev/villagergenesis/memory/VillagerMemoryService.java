@@ -30,9 +30,19 @@ public final class VillagerMemoryService {
 
         VillagerMemory memory = VillagerMemory.forVillager(villager);
         memory.observe(villager);
+
+        // Use only cheap facts already available on the entity. Do not scan nearby chunks/entities
+        // just to make a decision; richer threat/food/shelter observations can be injected later.
+        float maxHealth = villager.getMaxHealth();
+        int healthPercent = maxHealth <= 0.0F ? 100
+                : Math.round(100.0F * villager.getHealth() / maxHealth);
+        int threatEstimate = healthPercent <= 35 ? 75 : 0;
+        GoalPlanner.Context context = new GoalPlanner.Context(
+                threatEstimate, healthPercent, 3650.0,
+                true, false, false, 0, Math.min(100, memory.observations()));
         String activeGoal = villager.getPersistentData().getString("villager_genesis_current_goal");
         if (!"expand_storage".equals(activeGoal) && !"explore".equals(activeGoal)) {
-            GoalPlanner.chooseGoal(memory.snapshot()).ifPresent(memory::setCurrentGoal);
+            GoalPlanner.chooseGoal(memory.snapshot(), context).ifPresent(memory::setCurrentGoal);
         }
         VillageKnowledgeSharingService.tryTeachOne(villager);
     }
