@@ -28,6 +28,14 @@ class SettlementTaskQueueTest {
         assertEquals(100,copy.progress()); assertEquals(1,copy.attempts());
         assertEquals("AGRICULTURE",copy.planCode()); assertEquals("Strong food potential.",copy.planReason());
     }
+    @Test void inProgressTaskCanBeRecoveredAfterNbtReload() {
+        var q=new SettlementTaskQueue();
+        var task=q.enqueueUnique(UUID.randomUUID(),SettlementTaskQueue.Type.PLAN_SETTLEMENT,10);
+        q.update(task.id(),SettlementTaskQueue.Status.IN_PROGRESS,10,11);
+        var restored=SettlementTaskQueue.load(q.save(new CompoundTag(),null),null);
+        assertEquals(task.id(),restored.peekPending().id());
+        assertEquals(SettlementTaskQueue.Status.IN_PROGRESS,restored.peekPending().status());
+    }
     @Test void pendingQueueUsesOldestCreationTime() {
         var q=new SettlementTaskQueue(); q.enqueueUnique(UUID.randomUUID(),SettlementTaskQueue.Type.PLAN_SETTLEMENT,20);
         var earlier=q.enqueueUnique(UUID.randomUUID(),SettlementTaskQueue.Type.PLAN_SETTLEMENT,10);
