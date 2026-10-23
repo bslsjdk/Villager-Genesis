@@ -150,7 +150,8 @@ public final class VillageStarterShelterGoal extends Goal {
     }
 
     private boolean isRoleTool(ItemStack stack, VillageRoleService.Role role) {
-        if (stack.isEmpty() || stack.getDamageValue() >= stack.getMaxDamage()) return false;
+        if (stack.isEmpty()) return false;
+        if (stack.isDamageableItem() && stack.getDamageValue() >= stack.getMaxDamage()) return false;
         return switch (role) {
             case FARMER -> stack.getItem() instanceof HoeItem;
             case GATHERER, LUMBERJACK -> stack.getItem() instanceof AxeItem;
