@@ -9,6 +9,7 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -17,6 +18,7 @@ import net.minecraft.world.phys.AABB;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.WeakHashMap;
 
 /**
@@ -37,6 +39,8 @@ public final class VillageStorageConstructionGoal extends Goal {
     private BlockPos source;
     private BlockPos destination;
     private int sourceSlot = -1;
+    private boolean craftBarrel;
+    private final Map<Integer, Integer> craftingCosts = new HashMap<>();
     private int travelTicks;
     private int retryTicks;
     private boolean finished;
@@ -79,7 +83,7 @@ public final class VillageStorageConstructionGoal extends Goal {
             return false;
         }
 
-        source = findStoredBarrel(level, snapshot);
+        source = findStorageMaterialSource(level, snapshot);
         if (source == null) return false;
         destination = findSafeSite(level, villager.blockPosition());
         if (destination == null) {
@@ -132,20 +136,55 @@ public final class VillageStorageConstructionGoal extends Goal {
         source = null;
         destination = null;
         sourceSlot = -1;
+        craftBarrel = false;
+        craftingCosts.clear();
         finished = false;
     }
 
-    private BlockPos findStoredBarrel(ServerLevel level, VisibleStorageScanner.Snapshot snapshot) {
+    private BlockPos findStorageMaterialSource(ServerLevel level, VisibleStorageScanner.Snapshot snapshot) {
+        // Prefer an already-crafted barrel; this requires no extra processing.
         for (VisibleStorageScanner.StorageContainer found : snapshot.containers()) {
             BlockPos pos = new BlockPos(found.x(), found.y(), found.z());
             BlockEntity entity = level.getBlockEntity(pos);
             if (!(entity instanceof Container container)) continue;
             for (int slot = 0; slot < container.getContainerSize(); slot++) {
                 ItemStack stack = container.getItem(slot);
-                if (stack.is(Items.BARREL) && !stack.isEmpty()) {
+                if (!stack.isEmpty() && stack.is(Items.BARREL)) {
                     sourceSlot = slot;
+                    craftBarrel = false;
                     return pos;
                 }
+            }
+        }
+
+        // Vanilla barrel recipe: six planks and two wooden slabs. Ingredients must exist
+        // together in one real public container, so there is no invisible cross-container stock.
+        for (VisibleStorageScanner.StorageContainer found : snapshot.containers()) {
+            BlockPos pos = new BlockPos(found.x(), found.y(), found.z());
+            BlockEntity entity = level.getBlockEntity(pos);
+            if (!(entity instanceof Container container)) continue;
+            Map<Integer, Integer> costs = new HashMap<>();
+            int planksNeeded = 6;
+            int slabsNeeded = 2;
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                ItemStack stack = container.getItem(slot);
+                if (stack.isEmpty()) continue;
+                if (stack.is(ItemTags.PLANKS) && planksNeeded > 0) {
+                    int use = Math.min(planksNeeded, stack.getCount());
+                    if (use > 0) costs.put(slot, use);
+                    planksNeeded -= use;
+                } else if (stack.is(ItemTags.WOODEN_SLABS) && slabsNeeded > 0) {
+                    int use = Math.min(slabsNeeded, stack.getCount());
+                    if (use > 0) costs.put(slot, use);
+                    slabsNeeded -= use;
+                }
+            }
+            if (planksNeeded == 0 && slabsNeeded == 0) {
+                craftingCosts.clear();
+                craftingCosts.putAll(costs);
+                sourceSlot = -1;
+                craftBarrel = true;
+                return pos;
             }
         }
         return null;
@@ -199,19 +238,54 @@ public final class VillageStorageConstructionGoal extends Goal {
         if (source == null || destination == null || !level.hasChunkAt(source)
                 || !level.hasChunkAt(destination)) return;
         BlockEntity sourceEntity = level.getBlockEntity(source);
-        if (!(sourceEntity instanceof Container container)
-                || sourceSlot < 0 || sourceSlot >= container.getContainerSize()) return;
-        ItemStack stored = container.getItem(sourceSlot);
-        if (stored.isEmpty() || !stored.is(Items.BARREL)) return;
+        if (!(sourceEntity instanceof Container container)) return;
         if (!level.getBlockState(destination).isAir()
                 || !level.getBlockState(destination.above()).isAir()
                 || !level.getBlockState(destination.below()).isFaceSturdy(level,
                 destination.below(), Direction.UP)) return;
 
+        Map<Integer, ItemStack> before = new HashMap<>();
+        if (!craftBarrel) {
+            if (sourceSlot < 0 || sourceSlot >= container.getContainerSize()) return;
+            ItemStack stored = container.getItem(sourceSlot);
+            if (stored.isEmpty() || !stored.is(Items.BARREL)) return;
+            before.put(sourceSlot, stored.copy());
+        } else {
+            if (craftingCosts.isEmpty()) return;
+            for (Map.Entry<Integer, Integer> cost : craftingCosts.entrySet()) {
+                int slot = cost.getKey();
+                int amount = cost.getValue();
+                if (slot < 0 || slot >= container.getContainerSize() || amount < 1) return;
+                ItemStack stack = container.getItem(slot);
+                if (stack.isEmpty() || stack.getCount() < amount) return;
+                if (stack.is(ItemTags.PLANKS)) {
+                    before.put(slot, stack.copy());
+                } else if (stack.is(ItemTags.WOODEN_SLABS)) {
+                    before.put(slot, stack.copy());
+                } else {
+                    return;
+                }
+            }
+        }
+
         if (!level.setBlock(destination, Blocks.BARREL.defaultBlockState(), 3)) return;
-        ItemStack consumed = container.removeItem(sourceSlot, 1);
-        if (consumed.isEmpty() || !consumed.is(Items.BARREL)) {
+        boolean consumedAll = true;
+        if (!craftBarrel) {
+            ItemStack consumed = container.removeItem(sourceSlot, 1);
+            consumedAll = !consumed.isEmpty() && consumed.is(Items.BARREL);
+        } else {
+            for (Map.Entry<Integer, Integer> cost : craftingCosts.entrySet()) {
+                ItemStack consumed = container.removeItem(cost.getKey(), cost.getValue());
+                if (consumed.isEmpty() || consumed.getCount() != cost.getValue()) {
+                    consumedAll = false;
+                    break;
+                }
+            }
+        }
+        if (!consumedAll) {
             level.setBlock(destination, Blocks.AIR.defaultBlockState(), 3);
+            before.forEach((slot, stack) -> container.setItem(slot, stack.copy()));
+            container.setChanged();
             return;
         }
         container.setChanged();
