@@ -29,38 +29,39 @@ This is the continuity ledger. Keep committed, CI-verified, in-game-verified, an
 - Visible storage scanning covers ordinary chests, trapped chests, and barrels in loaded chunks, with bounded radius (maximum 24).
 - BUILDER shelter construction consumes 33 real oak planks; MASON shelter construction consumes 33 real cobblestone. Placement is validated and rollback attempted on failure.
 - Storage expansion is limited to CRAFTER, CARETAKER, MAYOR.
-- Autonomy service installs equipment, storage/shelter construction, exploration, and guard combat goals per live villager instance.
-- Equipment goal takes real weapons, shields, or armor from storage. Guards may now also equip a real bow; ordinary resident self-defence remains optional.
-- Guard melee goal prioritizes hostile monsters attacking villagers and records successful attack outcomes.
+- Autonomy service installs equipment, storage/shelter construction, exploration, guard combat, and resident threat-avoidance goals per live villager instance.
+- Equipment goal takes real equipment from storage. Guard combat has melee and a committed ranged implementation using real stored ammunition; see validation caveats below.
+- Guard combat prioritizes hostile monsters targeting villagers and records successful attack outcomes.
+- New ordinary-resident escape goal avoids nearby hostile monsters without attacking: checks danger periodically, picks a clear escape destination with solid footing, checks all relevant chunks are already loaded, and records the outcome. Successful escapes teach only hostile-awareness knowledge.
 
-## Latest combat work
-- 35c432ac1ad67041f4cfe9592f044be11fd72da8: threat prioritization and melee outcome recording. GitHub Actions Build run #273 / 40005041368 passed.
-- b7abf184790d97f636dc7f6ca860d000f0253220: allow guards to equip bows from real storage.
-- 96351d82c1b5722f68451d13c4417e7f8f7670fd: ranged attacks using real stored arrows; CI run #281 / 40005431735 was in progress when last checked.
-- eb738f8839d9f027a513004208d7023038e18c66: fix no-ammunition behavior so a guard does not freeze at range and can fall back to melee. CI status for this latest commit has not yet appeared in the connector results.
-- Ranged code scans bounded nearby storage, checks the chunk is loaded, removes one real arrow before creating a projectile, and only targets hostile Monster entities. Compilation/API compatibility and projectile behavior are not yet verified for the latest commit.
-- No guard combat or ranged combat has been tested in a running Minecraft world.
+## Latest validation
+- Commit 96351d82c1b5722f68451d13c4417e7f8f7670fd: guard ranged code; Build run #281 / 40005431735 passed.
+- Commit eb738f8839d9f027a513004208d7023038e18c66: fallback to movement/close range when no real ammunition is available; Build run #284 / 40005548168 passed.
+- Commit 376fdea7b04a9e7c1acb4b2f763471b5ad32ad9c: added VillageResidentFleeGoal.
+- Commit 4ff7c281beb599661946c217869729c86f8b1cd6: installed resident escape behavior in VillageAutonomyService.
+- Commit 9b459216e980f3eb0a8a9ec71c502ee78e57c79a: records hostile-awareness knowledge only after a successful escape.
+- The latest branch build for the resident escape integration was still running at last check (Build run #290 / 40005782672); a PR-triggered build was also running. Re-check Actions before treating the new goal as CI-passed.
+- No guard combat or resident escape behavior has been tested in a running Minecraft world.
 
 ## Unfinished work that must not be forgotten
-1. Validate ranged combat against 1.21.1 APIs; test trajectory, aiming, actual arrow consumption, no-ammo fallback, and whether bows behave correctly in-game.
-2. Implement real shield raising/blocking, not merely equipping a shield.
-3. Implement durability-aware equipment maintenance, repair with real supplies, and replacement only from real storage.
-4. Coordinate guards so they protect different threatened residents instead of dogpiling one target; define defense radius and post behavior.
-5. Complete ordinary resident safety behavior: optional self-defence plus fleeing/seeking guards for residents who do not fight.
-6. Improve after-combat learning based on actual outcomes, not arbitrary skill grants. Current behavior records successful attack outcomes only.
-7. Add deterministic tests where feasible, inspect CI, and keep actual in-game verification separate.
+1. Re-check CI for the latest resident-escape commit and fix any compile/test failures.
+2. In-game test escape destination selection, navigation, fleeing from a monster, and goal interruption alongside vanilla behavior.
+3. Add deterministic tests where feasible for escape destination safety and state transitions.
+4. Implement real shield blocking only after API/behavior validation; merely equipping a shield is not blocking.
+5. Implement durability-aware equipment maintenance and replacement only from real available supplies.
+6. Coordinate guards so protection is distributed rather than every guard pursuing the same target; define defense radius and posting behavior.
+7. Improve after-event learning based on observed outcomes, not arbitrary skill grants.
 8. Replace static UUID role assignment with staffing based on population, skills, vanilla profession, and settlement needs.
 9. Implement real gathering, crafting, logistics, mentorship/knowledge transfer, and career mobility without duplicating vanilla systems.
 10. Settlement simulation (food, housing, population, territory, diplomacy, etc.) remains incomplete; do not claim otherwise based on metadata alone.
 11. Regression-check scan frequency, cooldowns, goal interruption, inventory races, persistence, loaded-chunk safety, and player-build protection.
 
 ## Next execution order
-1. Check CI for eb738f8839d9f027a513004208d7023038e18c66; fix compile/test failures before adding more combat behavior.
-2. Validate ranged combat and real arrow accounting.
-3. Implement shield blocking and resident flee/guard-seeking behavior.
-4. Add equipment durability/maintenance and coordinated threat assignment.
-5. Add tests; in-game verification still requires a real Minecraft test.
-6. Continue dynamic staffing, learning, resource jobs, and settlement-level simulation.
+1. Check Actions for the latest resident-escape commit; fix any build/test failures.
+2. Review goal priority interactions and test escape behavior in Minecraft.
+3. Add deterministic tests for bounded destination selection and state transitions.
+4. Continue settlement staffing, resource logistics, learning, and simulation.
+5. Keep CI and in-game validation status separate.
 
 ## Status language
 - Committed: source is on the branch.
