@@ -93,7 +93,9 @@ public final class SettlementStaffingPolicy {
             }
         }
 
-        targets.put(VillageRoleService.Role.MAYOR, 1);
+        // A two-person founding group cannot afford a dedicated administrator. Leadership becomes
+        // a staffed job only after the settlement has enough people to spare one resident.
+        if (survey.residents() >= 5) targets.put(VillageRoleService.Role.MAYOR, 1);
         // Keep non-violent specialist roles bounded; this policy does not decide combat behavior.
         if (survey.residents() >= 10) targets.put(VillageRoleService.Role.SCOUT, 1);
 
@@ -102,10 +104,11 @@ public final class SettlementStaffingPolicy {
         int total = targets.values().stream().mapToInt(Integer::intValue).sum();
         VillageRoleService.Role[] trimOrder = {
                 VillageRoleService.Role.SCOUT, VillageRoleService.Role.CARETAKER,
-                VillageRoleService.Role.HUNTER, VillageRoleService.Role.HERDER,
                 VillageRoleService.Role.CRAFTER, VillageRoleService.Role.MASON,
-                VillageRoleService.Role.LUMBERJACK, VillageRoleService.Role.MAYOR,
-                VillageRoleService.Role.FARMER, VillageRoleService.Role.GATHERER
+                VillageRoleService.Role.HUNTER, VillageRoleService.Role.HERDER,
+                VillageRoleService.Role.MAYOR, VillageRoleService.Role.LUMBERJACK,
+                VillageRoleService.Role.BUILDER, VillageRoleService.Role.FARMER,
+                VillageRoleService.Role.GATHERER
         };
         for (VillageRoleService.Role role : trimOrder) {
             if (total <= survey.residents()) break;
