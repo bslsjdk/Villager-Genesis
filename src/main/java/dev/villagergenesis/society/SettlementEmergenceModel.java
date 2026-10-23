@@ -82,14 +82,17 @@ public final class SettlementEmergenceModel {
             return new Transition(current, false, "incomplete survey; preserve prior state");
         }
 
-        Stage nextCandidate = candidateStage(survey);
-        if (nextCandidate.ordinal() <= current.stage().ordinal()) {
+        Stage evidenceStage = candidateStage(survey);
+        if (evidenceStage.ordinal() <= current.stage().ordinal()) {
             // Stages do not regress from a single bad survey. Long-term decline/abandonment
             // should be handled by a separate persisted decay policy.
             return new Transition(new State(current.stage(), current.stageSince(), 0),
                     false, "requirements for further growth are not currently met");
         }
 
+        // A strong survey cannot skip the intermediate social stages. Each stage has its own
+        // persistence requirement, even if the same survey also satisfies later-stage criteria.
+        Stage nextCandidate = Stage.values()[current.stage().ordinal() + 1];
         int streak = current.consecutiveQualifyingSurveys() + 1;
         int required = surveysRequired(nextCandidate);
         if (streak < required) {
