@@ -80,7 +80,10 @@ public final class VillageMiningGoal extends Goal {
         }
         if (villager.blockPosition().distSqr(target) > 4.0D) {
             if (travelTicks >= MAX_TRAVEL_TICKS) finished = true;
-            else if (villager.getNavigation().isDone() && travelTicks % 30 == 0) {
+            else if (travelTicks % 10 == 0
+                    && (villager.getNavigation().isDone()
+                    || !VillageWorkPolicy.navigationTargets(villager, target))) {
+                // Reclaim the path if vanilla Brain tried to redirect the worker to a social target.
                 villager.getNavigation().moveTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D, 0.75D);
             }
             return;
