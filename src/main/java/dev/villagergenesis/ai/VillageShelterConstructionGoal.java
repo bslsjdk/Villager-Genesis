@@ -49,7 +49,6 @@ public final class VillageShelterConstructionGoal extends Goal {
         if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
-                || !villager.getNavigation().isDone()
                 || !canConstructShelter(VillageRoleService.roleOf(villager))
                 || level.getGameTime() < villager.getPersistentData().getLong("villager_genesis_next_shelter")) {
             return false;
@@ -91,6 +90,7 @@ public final class VillageShelterConstructionGoal extends Goal {
 
     @Override
     public void tick() {
+        VillageWorkPolicy.claimRoutineWork(villager);
         travelTicks++;
         if (site == null || !(villager.level() instanceof ServerLevel level)) {
             finished = true;
