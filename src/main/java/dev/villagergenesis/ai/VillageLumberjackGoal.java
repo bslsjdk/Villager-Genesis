@@ -37,8 +37,8 @@ import java.util.Set;
  *
  * This intentionally conservative heuristic requires a vertical trunk and nearby leaves, and
  * rejects locations near block entities, doors, beds, and common construction blocks. It is not a
- * perfect ownership detector, so it only touches one log per trip and revalidates immediately
- * before breaking.
+ * perfect ownership detector, so it caps the connected tree size and revalidates every log
+ * immediately before breaking.
  */
 public final class VillageLumberjackGoal extends Goal {
     private static final String NEXT_TRY = "villager_genesis_next_lumberjack";
@@ -431,8 +431,8 @@ public final class VillageLumberjackGoal extends Goal {
             }
         }
         if (logs.size() < 2) return List.of();
-        logs.sort(Comparator.comparingInt(BlockPos::getY)
-                .thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ));
+        logs.sort(Comparator.comparingInt((BlockPos pos) -> pos.getY())
+                .thenComparingInt(pos -> pos.getX()).thenComparingInt(pos -> pos.getZ()));
         return List.copyOf(logs);
     }
 
