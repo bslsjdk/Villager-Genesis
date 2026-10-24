@@ -36,7 +36,7 @@ import java.util.List;
  */
 public final class VillageLumberjackGoal extends Goal {
     private static final String NEXT_TRY = "villager_genesis_next_lumberjack";
-    private static final int COOLDOWN_TICKS = 400;
+    private static final int COOLDOWN_TICKS = 40;
     private static final int MAX_TRAVEL_TICKS = 160;
     private static final int SEARCH_RADIUS = 7;
     private final Villager villager;
