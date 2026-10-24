@@ -53,6 +53,7 @@ public final class VillageCropWorkGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null || !villager.getNavigation().isDone()
                 || VillageRoleService.ensureRole(villager) != VillageRoleService.Role.FARMER
@@ -132,6 +133,7 @@ public final class VillageCropWorkGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         return !finished && target != null && travelTicks < MAX_TRAVEL_TICKS && villager.isAlive();
     }
 
