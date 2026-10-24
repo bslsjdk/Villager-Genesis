@@ -2,6 +2,7 @@ package dev.villagergenesis.ai;
 
 import dev.villagergenesis.memory.VillagerMemory;
 import dev.villagergenesis.society.VillageRoleService;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -9,6 +10,7 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -39,8 +41,9 @@ public final class VillageBootstrapCraftingGoal extends Goal {
                 && role != VillageRoleService.Role.LUMBERJACK && role != VillageRoleService.Role.CRAFTER
                 && role != VillageRoleService.Role.BUILDER) return false;
         Container inventory = villager.getInventory();
-        return findLogSlot(inventory) >= 0 || count(inventory, Items.OAK_PLANKS) >= 4
-                || hasFourPlanks(inventory);
+        return findLogSlot(inventory) >= 0 || (count(inventory, Items.CRAFTING_TABLE) == 0
+                && hasFourPlanks(inventory)
+                && !hasNearbyWorkbench(level, villager.blockPosition(), 5));
     }
 
     @Override
@@ -56,6 +59,7 @@ public final class VillageBootstrapCraftingGoal extends Goal {
         // First make one crafting table if the villager does not already carry one.
         // This is a real vanilla recipe: four planks consumed, one table produced.
         if (count(inventory, Items.CRAFTING_TABLE) == 0 && hasFourPlanks(inventory)
+                && !hasNearbyWorkbench(level, villager.blockPosition(), 5)
                 && hasFreeSlotOrMerge(inventory, Items.CRAFTING_TABLE)) {
             if (consumePlanks(inventory, 4)) {
                 insert(inventory, new ItemStack(Items.CRAFTING_TABLE));
@@ -100,6 +104,21 @@ public final class VillageBootstrapCraftingGoal extends Goal {
 
     private void finish(ServerLevel level) {
         villager.getPersistentData().putLong(NEXT_TRY, level.getGameTime() + COOLDOWN_TICKS);
+    }
+
+    private boolean hasNearbyWorkbench(ServerLevel level, BlockPos origin, int radius) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -2; dy <= 3; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (dx * dx + dz * dz > radius * radius) continue;
+                    BlockPos pos = origin.offset(dx, dy, dz);
+                    if (level.hasChunkAt(pos) && level.getBlockState(pos).is(Blocks.CRAFTING_TABLE)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private int findLogSlot(Container inventory) {
