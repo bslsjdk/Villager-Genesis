@@ -20,12 +20,12 @@ import java.util.List;
  */
 public final class VillageBootstrapCraftingGoal extends Goal {
     private static final String NEXT_TRY = "villager_genesis_next_bootstrap_craft";
-    private static final int COOLDOWN_TICKS = 100;
+    private static final int COOLDOWN_TICKS = 20;
     private final Villager villager;
 
     public VillageBootstrapCraftingGoal(Villager villager) {
         this.villager = villager;
-        setFlags(EnumSet.noneOf(Flag.class));
+        setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
