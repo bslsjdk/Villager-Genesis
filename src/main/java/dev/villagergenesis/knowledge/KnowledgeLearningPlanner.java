@@ -46,6 +46,25 @@ public final class KnowledgeLearningPlanner {
         return List.copyOf(candidates.subList(0, Math.min(limit, candidates.size())));
     }
 
+    /**
+     * Validate IDs recovered from physical books. Archives are user-editable world data, so only
+     * registered lessons with currently satisfied prerequisites may be learned from them.
+     */
+    public static List<KnowledgeDefinition> recommendArchivedKnowledge(
+            KnowledgeRegistry registry, Set<String> archivedIds, Set<String> masteredIds, int limit) {
+        if (registry == null || archivedIds == null || limit <= 0) {
+            return List.of();
+        }
+        Set<String> mastered = masteredIds == null ? Set.of() : Set.copyOf(masteredIds);
+        return registry.all().stream()
+                .filter(definition -> archivedIds.contains(definition.id()))
+                .filter(definition -> !mastered.contains(definition.id()))
+                .filter(definition -> mastered.containsAll(definition.prerequisites()))
+                .sorted(Comparator.comparing(KnowledgeDefinition::id))
+                .limit(limit)
+                .toList();
+    }
+
     /** A higher threat strongly favors immediate survival knowledge over long-term improvements. */
     static int score(KnowledgeDefinition definition, int threatLevel) {
         int threat = Math.max(0, Math.min(100, threatLevel));

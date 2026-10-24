@@ -44,6 +44,45 @@ class KnowledgeLearningPlannerTest {
     }
 
     @Test
+    void archivedBooksCannotInjectUnknownIdsOrSkipPrerequisites() {
+        var archived = Set.of("workbench_crafting", "basic_crafting", "not_a_real_lesson");
+        var withoutPrerequisites = KnowledgeLearningPlanner.recommendArchivedKnowledge(
+                registry, archived, Set.of(), 10);
+
+        assertEquals(Set.of(), withoutPrerequisites.stream()
+                .map(KnowledgeDefinition::id).collect(Collectors.toSet()));
+
+        var withPrerequisites = KnowledgeLearningPlanner.recommendArchivedKnowledge(
+                registry, archived, Set.of("basic_tools"), 10);
+        var learnedIds = withPrerequisites.stream()
+                .map(KnowledgeDefinition::id).collect(Collectors.toSet());
+
+        assertTrue(learnedIds.contains("basic_crafting"));
+        assertFalse(learnedIds.contains("workbench_crafting"));
+        assertFalse(learnedIds.contains("not_a_real_lesson"));
+    }
+
+    @Test
+    void geniusArchiveLimitStillRespectsPrerequisites() {
+        var archived = Set.of("basic_crafting", "workbench_crafting");
+        var lessons = KnowledgeLearningPlanner.recommendArchivedKnowledge(
+                registry, archived, Set.of("basic_tools"), 3);
+
+        assertEquals(1, lessons.size());
+        assertEquals("basic_crafting", lessons.get(0).id());
+    }
+
+    @Test
+    void rejectsIndirectPrerequisiteCycles() {
+        registry.register(new KnowledgeDefinition(
+                "cycle_a", "Cycle A", "Temporary dependency", Set.of("cycle_b"), 50, 5));
+
+        assertThrows(IllegalArgumentException.class, () -> registry.register(
+                new KnowledgeDefinition(
+                        "cycle_b", "Cycle B", "Would close a cycle", Set.of("cycle_a"), 50, 5)));
+    }
+
+    @Test
     void clampsThreatAndReturnsImmutableResults() {
         var recommendations = KnowledgeLearningPlanner.recommendLearning(registry, Set.of(), 1000, 2);
 

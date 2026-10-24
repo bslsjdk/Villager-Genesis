@@ -1,6 +1,7 @@
 package dev.villagergenesis.ai;
 
 import dev.villagergenesis.memory.VillagerMemory;
+import dev.villagergenesis.society.VillageRoleService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -26,7 +27,7 @@ import java.util.WeakHashMap;
  */
 public final class VillageExplorationGoal extends Goal {
     private static final String NEXT_EXPLORATION = "villager_genesis_next_exploration";
-    private static final int COOLDOWN_TICKS = 1_200;
+    private static final int COOLDOWN_TICKS = 6_000;
     private static final int MAX_TRAVEL_TICKS = 240;
     private static final String NEXT_CHECK = "villager_genesis_next_exploration_check";
     private static final int REGION_SCAN_INTERVAL = 100;
@@ -43,9 +44,11 @@ public final class VillageExplorationGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
+        if (!VillageWorkPolicy.canPerformRoutineWork(villager)
+                || !(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
-                || !villager.getNavigation().isDone()) {
+                || !villager.getNavigation().isDone()
+                || VillageRoleService.ensureRole(villager) != VillageRoleService.Role.SCOUT) {
             return false;
         }
         long now = level.getGameTime();

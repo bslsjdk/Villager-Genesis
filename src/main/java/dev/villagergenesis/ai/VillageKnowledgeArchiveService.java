@@ -52,8 +52,14 @@ public final class VillageKnowledgeArchiveService {
 
     /** Read the knowledge IDs stored in all nearby physical book items in one scan. */
     public static Set<String> listArchivedKnowledge(ServerLevel level, BlockPos center) {
+        return listArchivedKnowledge(level, center, DEFAULT_RADIUS);
+    }
+
+    /** Read a wider physical-book search area for librarians; never loads new chunks. */
+    public static Set<String> listArchivedKnowledge(ServerLevel level, BlockPos center, int radius) {
         Set<String> all = new LinkedHashSet<>();
-        visitBooks(level, center, DEFAULT_RADIUS, (container, slot, stack) -> {
+        int boundedRadius = Math.max(DEFAULT_RADIUS, Math.min(16, radius));
+        visitBooks(level, center, boundedRadius, (container, slot, stack) -> {
             all.addAll(readKnowledge(stack));
             return false;
         });
@@ -91,8 +97,14 @@ public final class VillageKnowledgeArchiveService {
 
     private static boolean writeKnowledge(Container container, int slot, ItemStack original,
                                           Set<String> ids) {
+        boolean updatingArchive = original.getOrDefault(
+                DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag()
+                .getBoolean(ARCHIVE_NAME);
+
+        // Never overwrite a player's ordinary book or written book. Existing mod archives may be
+        // updated in place; otherwise create a separate archive only in a genuinely empty slot.
         int destinationSlot = slot;
-        if (original.getCount() > 1) {
+        if (!updatingArchive) {
             destinationSlot = -1;
             for (int i = 0; i < container.getContainerSize(); i++) {
                 if (i != slot && container.getItem(i).isEmpty()) {
@@ -100,14 +112,13 @@ public final class VillageKnowledgeArchiveService {
                     break;
                 }
             }
-            // Never destroy the remaining book stack to make room for an archive.
             if (destinationSlot < 0) return false;
-            ItemStack removed = container.removeItem(slot, 1);
-            if (removed.isEmpty()) return false;
         }
 
         ItemStack archiveBook = new ItemStack(Items.WRITTEN_BOOK, 1);
-        CompoundTag root = original.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        CompoundTag root = updatingArchive
+                ? original.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag()
+                : new CompoundTag();
         CompoundTag archive = root.contains(ARCHIVE_ROOT, Tag.TAG_COMPOUND)
                 ? root.getCompound(ARCHIVE_ROOT) : new CompoundTag();
         ListTag list = new ListTag();

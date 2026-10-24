@@ -18,6 +18,9 @@ public final class KnowledgeRegistry {
                 "Use and replace common tools for gathering and farming.", Set.of(), 75, 10));
         register(new KnowledgeDefinition("basic_crafting", "Basic crafting",
                 "Craft common items from available materials.", Set.of("basic_tools"), 72, 12));
+        register(new KnowledgeDefinition("workbench_crafting", "Workbench crafting",
+                "Select a valid recipe, verify ingredients, use a crafting table, and confirm the output before recording success.",
+                Set.of("basic_crafting"), 78, 18));
         register(new KnowledgeDefinition("basic_food_production", "Food production",
                 "Plant, tend, harvest, and replant food crops.", Set.of("basic_tools"), 95, 12));
         register(new KnowledgeDefinition("basic_equipment", "Basic equipment",
@@ -68,8 +71,23 @@ public final class KnowledgeRegistry {
             if (prerequisite.equals(definition.id())) {
                 throw new IllegalArgumentException("Knowledge cannot depend on itself: " + prerequisite);
             }
+            if (hasPath(prerequisite, definition.id(), new java.util.HashSet<>())) {
+                throw new IllegalArgumentException("Knowledge prerequisite cycle involving: "
+                        + definition.id() + " and " + prerequisite);
+            }
         }
         definitions.put(definition.id(), definition);
+    }
+
+    private boolean hasPath(String current, String target, Set<String> visited) {
+        if (current.equals(target)) return true;
+        if (!visited.add(current)) return false;
+        KnowledgeDefinition known = definitions.get(current);
+        if (known == null) return false;
+        for (String prerequisite : known.prerequisites()) {
+            if (hasPath(prerequisite, target, visited)) return true;
+        }
+        return false;
     }
 
     public Optional<KnowledgeDefinition> find(String id) {

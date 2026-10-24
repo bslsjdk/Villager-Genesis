@@ -1,6 +1,8 @@
 package dev.villagergenesis.ai;
 
 import dev.villagergenesis.knowledge.KnowledgeBaseline;
+import dev.villagergenesis.knowledge.KnowledgeLearningPlanner;
+import dev.villagergenesis.knowledge.KnowledgeRegistry;
 import dev.villagergenesis.memory.VillagerMemory;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.npc.Villager;
@@ -17,7 +19,9 @@ import java.util.WeakHashMap;
  */
 public final class VillageKnowledgeSharingService {
     private static final String NEXT_TEACHING = "villager_genesis_next_teaching";
+    private static final String GENIUS_TRAIT = "villager_genesis_genius";
     private static final int TEACHING_COOLDOWN = 200;
+    private static final int GENIUS_TEACHING_COOLDOWN = 100;
     private static final int ARCHIVE_SCAN_INTERVAL = 40;
     private static final Map<ServerLevel, Map<Long, Long>> NEXT_REGION_SCAN =
             Collections.synchronizedMap(new WeakHashMap<>());
@@ -31,61 +35,96 @@ public final class VillageKnowledgeSharingService {
             return;
         }
 
+        boolean librarian = teacher.getVillagerData().getProfession()
+                == net.minecraft.world.entity.npc.VillagerProfession.LIBRARIAN;
         long regionKey = (((long) (teacher.blockPosition().getX() >> 5)) << 32)
                 ^ ((teacher.blockPosition().getZ() >> 5) & 0xffffffffL);
+        // Keep librarian's wider scan budget separate so an ordinary villager cannot starve it.
+        if (librarian) regionKey ^= 0x8000000000000000L;
+        boolean scanArchive;
         synchronized (NEXT_REGION_SCAN) {
             Map<Long, Long> regions = NEXT_REGION_SCAN.computeIfAbsent(level,
                     ignored -> new HashMap<>());
-            if (level.getGameTime() < regions.getOrDefault(regionKey, 0L)) return;
-            regions.put(regionKey, level.getGameTime() + ARCHIVE_SCAN_INTERVAL);
+            scanArchive = level.getGameTime() >= regions.getOrDefault(regionKey, 0L);
+            if (scanArchive) {
+                regions.put(regionKey, level.getGameTime() + ARCHIVE_SCAN_INTERVAL);
+            }
         }
 
         var sourceMemory = VillagerMemory.forVillager(teacher);
+        boolean genius = isGenius(teacher);
 
-        // A physical book can outlive its author. Villagers can recover archived knowledge
-        // before teaching, so knowledge does not disappear with one particular resident.
-        var archivedKnowledge = VillageKnowledgeArchiveService.listArchivedKnowledge(
-                level, teacher.blockPosition());
-        String archived = archivedKnowledge.stream()
-                .filter(id -> !sourceMemory.knownKnowledge().contains(id))
-                .sorted()
-                .findFirst().orElse(null);
-        if (archived != null) {
-            sourceMemory.learnKnowledge(archived);
+        // Throttle expensive physical-container scans, not the whole teaching system. Otherwise
+        // the first villager ticking in a region suppresses every other villager's teaching.
+        int bookSearchRadius = librarian ? 16 : 8;
+        var archivedKnowledge = scanArchive
+                ? VillageKnowledgeArchiveService.listArchivedKnowledge(
+                        level, teacher.blockPosition(), bookSearchRadius)
+                : java.util.Set.<String>of();
+        KnowledgeRegistry registry = new KnowledgeRegistry();
+        var knownBeforeReading = sourceMemory.knownKnowledge();
+        // Physical books are untrusted input: accept only registered lessons whose prerequisites
+        // are already satisfied. A forged/old archive must not inject arbitrary IDs or skip a course.
+        var eligibleArchived = KnowledgeLearningPlanner.recommendArchivedKnowledge(
+                registry, archivedKnowledge, knownBeforeReading, genius ? 3 : 1);
+        for (var lesson : eligibleArchived) {
+            sourceMemory.learnKnowledge(lesson.id());
         }
 
         var known = sourceMemory.knownKnowledge();
-        String teachable = known.stream()
-                .filter(id -> !KnowledgeBaseline.isBaseline(id))
-                .sorted()
-                .findFirst().orElse(null);
-        if (teachable == null) return;
-
-        teacher.getPersistentData().putLong(NEXT_TEACHING,
-                level.getGameTime() + TEACHING_COOLDOWN);
-
-        // Archive one new fact per teaching cycle. This avoids rewriting the same first fact
-        // forever while keeping all storage and item counts physical and player-visible.
-        String archiveCandidate = known.stream()
-                .filter(id -> !KnowledgeBaseline.isBaseline(id))
-                .filter(id -> !archivedKnowledge.contains(id))
-                .sorted().findFirst().orElse(null);
-        if (archiveCandidate != null) {
-            VillageKnowledgeArchiveService.archiveOne(level, teacher.blockPosition(), archiveCandidate);
-        }
-
+        // Every villager can teach what they know. A librarian is not the only teacher;
+        // physical books are the librarian's additional source of knowledge.
         var nearby = level.getEntitiesOfClass(Villager.class,
                 teacher.getBoundingBox().inflate(4.0D),
                 other -> other != teacher && other.isAlive() && !other.isBaby()
                         && other.getTarget() == null
-                        && !VillagerMemory.forVillager(other).knownKnowledge().contains(teachable));
-        Villager student = nearby.stream()
-                .min(Comparator.comparingDouble(teacher::distanceToSqr))
-                .orElse(null);
-        if (student == null) return;
+                        && level.getGameTime() >= other.getPersistentData().getLong(NEXT_TEACHING))
+                .stream()
+                .sorted(Comparator.comparingDouble(teacher::distanceToSqr))
+                .toList();
+
+        Villager student = null;
+        String teachable = null;
+        for (Villager candidate : nearby) {
+            var studentMemory = VillagerMemory.forVillager(candidate);
+            var lessons = KnowledgeLearningPlanner.recommendTeaching(
+                    registry, known, studentMemory.knownKnowledge(), 1);
+            if (!lessons.isEmpty()) {
+                student = candidate;
+                teachable = lessons.get(0).id();
+                break;
+            }
+        }
+        if (student == null || teachable == null) return;
+
+        teacher.getPersistentData().putLong(NEXT_TEACHING,
+                level.getGameTime() + (genius ? GENIUS_TEACHING_COOLDOWN : TEACHING_COOLDOWN));
+
+        // Archive knowledge in physical books when available; teaching also works without books.
+        String archiveCandidate = known.stream()
+                .filter(id -> !KnowledgeBaseline.isBaseline(id))
+                .filter(id -> !archivedKnowledge.contains(id))
+                .sorted().findFirst().orElse(null);
+        if (scanArchive && archiveCandidate != null) {
+            VillageKnowledgeArchiveService.archiveOne(level, teacher.blockPosition(), archiveCandidate);
+        }
 
         VillagerMemory.forVillager(student).learnKnowledge(teachable);
         student.getPersistentData().putLong(NEXT_TEACHING,
-                level.getGameTime() + TEACHING_COOLDOWN);
+                level.getGameTime() + (isGenius(student)
+                        ? GENIUS_TEACHING_COOLDOWN : TEACHING_COOLDOWN));
+    }
+
+    /**
+     * A small, stable minority can become natural prodigies regardless of profession.
+     * The UUID-based trait survives reloads and does not replace practice or prerequisites.
+     */
+    public static boolean isGenius(Villager villager) {
+        var data = villager.getPersistentData();
+        if (!data.contains(GENIUS_TRAIT)) {
+            data.putBoolean(GENIUS_TRAIT,
+                    Math.floorMod(villager.getUUID().hashCode(), 32) == 0);
+        }
+        return data.getBoolean(GENIUS_TRAIT);
     }
 }
