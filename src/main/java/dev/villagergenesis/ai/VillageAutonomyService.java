@@ -32,25 +32,25 @@ public final class VillageAutonomyService {
             // Real construction may preempt farming, but urgent vanilla behaviors retain priority.
             villager.goalSelector.addGoal(6, new VillageEquipmentGoal(villager));
             // Founders can build a tiny lean-to from nine real carried planks before a full house exists.
-            villager.goalSelector.addGoal(7, new VillageStarterShelterGoal(villager));
+            villager.goalSelector.addGoal(6, new VillageStarterShelterGoal(villager));
             // Founding residents turn real carried logs into planks and then a crafting table.
-            villager.goalSelector.addGoal(7, new VillageBootstrapCraftingGoal(villager));
+            villager.goalSelector.addGoal(4, new VillageBootstrapCraftingGoal(villager));
             // Basic tools require real planks/sticks and an actually placed crafting table.
-            villager.goalSelector.addGoal(7, new VillageToolCraftingGoal(villager));
+            villager.goalSelector.addGoal(4, new VillageToolCraftingGoal(villager));
             // Farmers can only create farmland when they actually hold a usable hoe.
-            villager.goalSelector.addGoal(8, new VillageFarmlandPreparationGoal(villager));
+            villager.goalSelector.addGoal(7, new VillageFarmlandPreparationGoal(villager));
             // Plant only real seeds and harvest only crops this villager recorded planting.
-            villager.goalSelector.addGoal(8, new VillageCropWorkGoal(villager));
+            villager.goalSelector.addGoal(7, new VillageCropWorkGoal(villager));
             // Founders with no seeds may gather only actual grass loot before the crop loop starts.
-            villager.goalSelector.addGoal(8, new VillageSeedGatheringGoal(villager));
+            villager.goalSelector.addGoal(7, new VillageSeedGatheringGoal(villager));
             // Transfer real food to nearby public storage so individual inventories feed the settlement.
-            villager.goalSelector.addGoal(8, new VillageFoodDeliveryGoal(villager));
-            villager.goalSelector.addGoal(7, new VillageWorkbenchPlacementGoal(villager));
-            villager.goalSelector.addGoal(7, new VillageStorageConstructionGoal(villager));
+            villager.goalSelector.addGoal(7, new VillageFoodDeliveryGoal(villager));
+            villager.goalSelector.addGoal(4, new VillageWorkbenchPlacementGoal(villager));
+            villager.goalSelector.addGoal(6, new VillageStorageConstructionGoal(villager));
             // Lumberjacks turn naturally grown trees into real stored building material.
-            villager.goalSelector.addGoal(8, new VillageLumberjackGoal(villager));
+            villager.goalSelector.addGoal(4, new VillageLumberjackGoal(villager));
             // The shelter is a mod-owned construction behavior, not a duplicate of vanilla farming.
-            villager.goalSelector.addGoal(8, new VillageShelterConstructionGoal(villager));
+            villager.goalSelector.addGoal(6, new VillageShelterConstructionGoal(villager));
             villager.goalSelector.addGoal(9, new VillageExplorationGoal(villager));
             INSTALLED.put(villager, Boolean.TRUE);
         }
