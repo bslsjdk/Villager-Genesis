@@ -36,7 +36,7 @@ public final class VillageFarmlandPreparationGoal extends Goal {
 
     public VillageFarmlandPreparationGoal(Villager villager) {
         this.villager = villager;
-        setFlags(EnumSet.noneOf(Flag.class));
+        setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
