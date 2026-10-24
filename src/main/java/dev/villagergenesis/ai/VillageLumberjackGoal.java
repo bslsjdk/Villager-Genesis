@@ -61,7 +61,6 @@ public final class VillageLumberjackGoal extends Goal {
         if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
-                || !villager.getNavigation().isDone()
                 || level.getGameTime() < villager.getPersistentData().getLong(NEXT_TRY)
                 || level.getGameTime() < villager.getPersistentData().getLong(NEXT_SCAN)) return false;
         villager.getPersistentData().putLong(NEXT_SCAN, level.getGameTime() + SCAN_COOLDOWN_TICKS);
@@ -117,6 +116,7 @@ public final class VillageLumberjackGoal extends Goal {
 
     @Override
     public void tick() {
+        VillageWorkPolicy.claimRoutineWork(villager);
         travelTicks++;
         if (!(villager.level() instanceof ServerLevel level) || targetLog == null) {
             finished = true;
