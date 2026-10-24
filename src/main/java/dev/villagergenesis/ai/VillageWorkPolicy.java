@@ -1,6 +1,7 @@
 package dev.villagergenesis.ai;
 
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.npc.Villager;
 
@@ -24,6 +25,8 @@ public final class VillageWorkPolicy {
      */
     public static void claimRoutineWork(Villager villager) {
         if (villager == null || !villager.isAlive()) return;
+        // Leave the vanilla MEET/SOCIAL schedule while a real work goal owns the villager.
+        villager.getBrain().setActiveActivityIfPossible(Activity.WORK);
         villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
         villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
         villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
