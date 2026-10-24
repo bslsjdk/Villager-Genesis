@@ -47,6 +47,8 @@ public final class VillageAutonomyService {
             villager.goalSelector.addGoal(7, new VillageFoodDeliveryGoal(villager));
             villager.goalSelector.addGoal(4, new VillageWorkbenchPlacementGoal(villager));
             villager.goalSelector.addGoal(6, new VillageStorageConstructionGoal(villager));
+            // Miners harvest only exposed natural stone with a real pickaxe and timed breaking.
+            villager.goalSelector.addGoal(4, new VillageMiningGoal(villager));
             // Lumberjacks turn naturally grown trees into real stored building material.
             villager.goalSelector.addGoal(4, new VillageLumberjackGoal(villager));
             // The shelter is a mod-owned construction behavior, not a duplicate of vanilla farming.
