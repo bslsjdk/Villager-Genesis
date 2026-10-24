@@ -36,9 +36,11 @@ import java.util.List;
  */
 public final class VillageLumberjackGoal extends Goal {
     private static final String NEXT_TRY = "villager_genesis_next_lumberjack";
+    private static final String NEXT_SCAN = "villager_genesis_next_lumberjack_scan";
+    private static final int SCAN_COOLDOWN_TICKS = 40;
     private static final int COOLDOWN_TICKS = 40;
     private static final int MAX_TRAVEL_TICKS = 160;
-    private static final int SEARCH_RADIUS = 7;
+    private static final int SEARCH_RADIUS = 9;
     private final Villager villager;
     private BlockPos targetLog;
     private BlockPos targetStorage;
@@ -57,7 +59,9 @@ public final class VillageLumberjackGoal extends Goal {
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
                 || !villager.getNavigation().isDone()
-                || level.getGameTime() < villager.getPersistentData().getLong(NEXT_TRY)) return false;
+                || level.getGameTime() < villager.getPersistentData().getLong(NEXT_TRY)
+                || level.getGameTime() < villager.getPersistentData().getLong(NEXT_SCAN)) return false;
+        villager.getPersistentData().putLong(NEXT_SCAN, level.getGameTime() + SCAN_COOLDOWN_TICKS);
 
         VillageRoleService.Role role = VillageRoleService.ensureRole(villager);
         boolean trainedGatherer = role == VillageRoleService.Role.GATHERER
