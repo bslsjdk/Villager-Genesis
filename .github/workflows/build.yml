@@ -26,11 +26,16 @@ jobs:
         with:
           gradle-version: '8.12.1'
 
-      - name: Build and test
+      - name: Build and unit test
         run: gradle build --no-daemon
 
+      - name: Run NeoForge GameTests
+        run: gradle runGameTestServer --no-daemon
+
       - name: Upload mod JAR
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: villager-genesis
           path: build/libs/*.jar
+          if-no-files-found: warn
