@@ -26,7 +26,7 @@ import java.util.List;
 public final class VillageToolCraftingGoal extends Goal {
     private static final String NEXT_TRY = "villager_genesis_next_tool_craft";
     private static final String NEXT_TABLE_SCAN = "villager_genesis_next_tool_table_scan";
-    private static final int COOLDOWN_TICKS = 160;
+    private static final int COOLDOWN_TICKS = 40;
     private static final int TABLE_SCAN_COOLDOWN = 80;
     private final Villager villager;
     private Item desiredTool;
@@ -34,7 +34,7 @@ public final class VillageToolCraftingGoal extends Goal {
 
     public VillageToolCraftingGoal(Villager villager) {
         this.villager = villager;
-        setFlags(EnumSet.noneOf(Flag.class));
+        setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
