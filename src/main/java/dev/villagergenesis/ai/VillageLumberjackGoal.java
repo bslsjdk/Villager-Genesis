@@ -104,6 +104,14 @@ public final class VillageLumberjackGoal extends Goal {
             targetTreeLogs = List.of();
             return false;
         }
+        if (!SettlementTaskManager.tryClaim(level, villager.getUUID(),
+                SettlementTaskManager.TaskType.LOGGING, targetLog, level.getGameTime())) {
+            targetLog = null;
+            targetStorage = null;
+            targetSlot = -1;
+            targetTreeLogs = List.of();
+            return false;
+        }
         return true;
     }
 
@@ -137,6 +145,11 @@ public final class VillageLumberjackGoal extends Goal {
             finished = true;
             return;
         }
+        if (!SettlementTaskManager.renew(level, villager.getUUID(),
+                SettlementTaskManager.TaskType.LOGGING, targetLog, level.getGameTime())) {
+            finished = true;
+            return;
+        }
         if (villager.blockPosition().distSqr(targetLog) <= 4.0D) {
             villager.getNavigation().stop();
             BlockState state = level.getBlockState(targetLog);
@@ -166,6 +179,10 @@ public final class VillageLumberjackGoal extends Goal {
     public void stop() {
         villager.getNavigation().stop();
         if (villager.level() instanceof ServerLevel level) {
+            if (targetLog != null) {
+                SettlementTaskManager.release(level, villager.getUUID(),
+                        SettlementTaskManager.TaskType.LOGGING, targetLog);
+            }
             villager.getPersistentData().putLong(NEXT_TRY, level.getGameTime() + COOLDOWN_TICKS);
         }
         villager.getPersistentData().putString("villager_genesis_current_goal", "observe");

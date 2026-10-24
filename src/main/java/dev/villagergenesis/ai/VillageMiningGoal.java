@@ -57,7 +57,13 @@ public final class VillageMiningGoal extends Goal {
                 || villager.getMainHandItem().getDamageValue() >= villager.getMainHandItem().getMaxDamage()) return false;
         villager.getPersistentData().putLong(NEXT_SCAN, now + SCAN_COOLDOWN);
         target = findTarget(level, villager.blockPosition());
-        return target != null;
+        if (target == null) return false;
+        if (!SettlementTaskManager.tryClaim(level, villager.getUUID(),
+                SettlementTaskManager.TaskType.MINING, target, now)) {
+            target = null;
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -76,6 +82,11 @@ public final class VillageMiningGoal extends Goal {
         VillageWorkPolicy.claimRoutineWork(villager);
         travelTicks++;
         if (!(villager.level() instanceof ServerLevel level) || target == null || !level.hasChunkAt(target)) {
+            finished = true;
+            return;
+        }
+        if (!SettlementTaskManager.renew(level, villager.getUUID(),
+                SettlementTaskManager.TaskType.MINING, target, level.getGameTime())) {
             finished = true;
             return;
         }
@@ -114,6 +125,10 @@ public final class VillageMiningGoal extends Goal {
     public void stop() {
         villager.getNavigation().stop();
         if (villager.level() instanceof ServerLevel level) {
+            if (target != null) {
+                SettlementTaskManager.release(level, villager.getUUID(),
+                        SettlementTaskManager.TaskType.MINING, target);
+            }
             villager.getPersistentData().putLong(NEXT_TRY, level.getGameTime() + WORK_COOLDOWN);
         }
         villager.getPersistentData().putString("villager_genesis_current_goal", "observe");
