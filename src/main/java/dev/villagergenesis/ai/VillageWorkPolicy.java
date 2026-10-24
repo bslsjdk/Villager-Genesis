@@ -1,7 +1,9 @@
 package dev.villagergenesis.ai;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.schedule.Activity;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.npc.Villager;
 
@@ -30,6 +32,13 @@ public final class VillageWorkPolicy {
         villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
         villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
         villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
+    }
+
+    /** Returns whether the active navigation path still belongs to the current work target. */
+    public static boolean navigationTargets(Villager villager, BlockPos target) {
+        if (villager == null || target == null) return false;
+        Path path = villager.getNavigation().getPath();
+        return path != null && target.equals(path.getTarget());
     }
 
     public static boolean canPerformRoutineWork(Villager villager) {
