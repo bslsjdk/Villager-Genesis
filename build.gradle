@@ -24,6 +24,11 @@ neoForge {
             server()
             programArgument '--nogui'
         }
+        gameTestServer {
+            type = "gameTestServer"
+            property 'neoforge.enabledGameTestNamespaces', mod_id
+            setForceExit false
+        }
     }
     mods {
         "${mod_id}" {
