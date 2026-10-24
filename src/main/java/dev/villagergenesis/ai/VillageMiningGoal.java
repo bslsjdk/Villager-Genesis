@@ -47,8 +47,7 @@ public final class VillageMiningGoal extends Goal {
     public boolean canUse() {
         if (!VillageWorkPolicy.canPerformRoutineWork(villager)
                 || !(villager.level() instanceof ServerLevel level)
-                || !villager.isAlive() || villager.isBaby() || villager.getTarget() != null
-                || !villager.getNavigation().isDone()) return false;
+                || !villager.isAlive() || villager.isBaby() || villager.getTarget() != null) return false;
         long now = level.getGameTime();
         if (now < villager.getPersistentData().getLong(NEXT_TRY)
                 || now < villager.getPersistentData().getLong(NEXT_SCAN)) return false;
@@ -73,6 +72,7 @@ public final class VillageMiningGoal extends Goal {
 
     @Override
     public void tick() {
+        VillageWorkPolicy.claimRoutineWork(villager);
         travelTicks++;
         if (!(villager.level() instanceof ServerLevel level) || target == null || !level.hasChunkAt(target)) {
             finished = true;
