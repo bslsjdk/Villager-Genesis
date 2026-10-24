@@ -36,6 +36,7 @@ public final class VillageWorkbenchPlacementGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
                 || !villager.getNavigation().isDone()
@@ -60,6 +61,7 @@ public final class VillageWorkbenchPlacementGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         return !finished && site != null && travelTicks < MAX_TRAVEL_TICKS
                 && villager.isAlive() && villager.getTarget() == null;
     }
