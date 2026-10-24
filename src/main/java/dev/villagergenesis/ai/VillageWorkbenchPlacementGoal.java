@@ -39,7 +39,6 @@ public final class VillageWorkbenchPlacementGoal extends Goal {
         if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
-                || !villager.getNavigation().isDone()
                 || level.getGameTime() < villager.getPersistentData().getLong(NEXT_TRY)
                 || !hasCarriedTable()) return false;
         // Negative scans are throttled too: without this, every idle villager could inspect
@@ -68,6 +67,7 @@ public final class VillageWorkbenchPlacementGoal extends Goal {
 
     @Override
     public void tick() {
+        VillageWorkPolicy.claimRoutineWork(villager);
         travelTicks++;
         if (!(villager.level() instanceof ServerLevel level) || site == null) {
             finished = true;
