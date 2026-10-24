@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.AxeItem;
@@ -46,6 +47,8 @@ public final class VillageLumberjackGoal extends Goal {
     private BlockPos targetStorage;
     private int targetSlot = -1;
     private int travelTicks;
+    private int breakingTicks;
+    private int requiredBreakingTicks = -1;
     private boolean finished;
 
     public VillageLumberjackGoal(Villager villager) {
@@ -101,6 +104,8 @@ public final class VillageLumberjackGoal extends Goal {
     @Override
     public void start() {
         travelTicks = 0;
+        breakingTicks = 0;
+        requiredBreakingTicks = -1;
         finished = false;
         villager.getPersistentData().putString("villager_genesis_current_goal", "harvest_wood");
         if (villager.level() instanceof ServerLevel level) {
@@ -118,8 +123,22 @@ public final class VillageLumberjackGoal extends Goal {
             return;
         }
         if (villager.blockPosition().distSqr(targetLog) <= 4.0D) {
-            harvestOneLog(level);
-            finished = true;
+            villager.getNavigation().stop();
+            BlockState state = level.getBlockState(targetLog);
+            if (!state.is(BlockTags.LOGS)) {
+                finished = true;
+                return;
+            }
+            if (requiredBreakingTicks < 0) {
+                requiredBreakingTicks = calculateBreakingTicks(level, targetLog, state);
+            }
+            breakingTicks++;
+            // Give the resident a visible work animation and a survival-mode-like mining duration.
+            if (breakingTicks % 4 == 0) villager.swing(InteractionHand.MAIN_HAND);
+            if (breakingTicks >= requiredBreakingTicks) {
+                harvestOneLog(level);
+                finished = true;
+            }
         } else if (villager.getNavigation().isDone() && travelTicks % 30 == 0) {
             navigate();
         }
@@ -136,6 +155,8 @@ public final class VillageLumberjackGoal extends Goal {
         targetStorage = null;
         targetSlot = -1;
         travelTicks = 0;
+        breakingTicks = 0;
+        requiredBreakingTicks = -1;
         finished = false;
     }
 
@@ -226,6 +247,22 @@ public final class VillageLumberjackGoal extends Goal {
             }
         }
         return null;
+    }
+
+    /**
+     * Approximate vanilla survival block-breaking time in ticks:
+     * hardness / tool speed / (30 when the held tool harvests logs, otherwise 100).
+     * This avoids instant harvesting while keeping a wooden axe close to player speed.
+     */
+    private int calculateBreakingTicks(ServerLevel level, BlockPos pos, BlockState state) {
+        float hardness = state.getDestroySpeed(level, pos);
+        if (hardness < 0.0F) return 20 * 60;
+        ItemStack held = villager.getMainHandItem();
+        float speed = held.isEmpty() ? 1.0F : held.getDestroySpeed(state);
+        if (speed <= 0.0F) speed = 1.0F;
+        boolean correctTool = held.getItem() instanceof AxeItem;
+        float divisor = correctTool ? 30.0F : 100.0F;
+        return Math.max(1, (int) Math.ceil(hardness * divisor / speed));
     }
 
     private void harvestOneLog(ServerLevel level) {
