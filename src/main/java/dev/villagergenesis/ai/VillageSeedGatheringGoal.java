@@ -43,6 +43,7 @@ public final class VillageSeedGatheringGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null || !villager.getNavigation().isDone()
                 || level.getGameTime() < villager.getPersistentData().getLong(NEXT_TRY)
@@ -100,6 +101,7 @@ public final class VillageSeedGatheringGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         return !finished && target != null && travelTicks < 120 && villager.isAlive();
     }
 
