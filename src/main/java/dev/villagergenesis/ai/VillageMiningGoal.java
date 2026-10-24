@@ -9,6 +9,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.PickaxeItem;
@@ -194,6 +195,7 @@ public final class VillageMiningGoal extends Goal {
         int slot = findInventorySlot(inventory, drop);
         if (slot < 0) return;
         if (!level.destroyBlock(target, false, villager)) return;
+        tool.hurtAndBreak(1, villager, EquipmentSlot.MAINHAND);
         ItemStack existing = inventory.getItem(slot);
         if (existing.isEmpty()) inventory.setItem(slot, drop.copy());
         else existing.grow(drop.getCount());
