@@ -27,7 +27,6 @@ neoForge {
         gameTestServer {
             type = "gameTestServer"
             systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
-            setForceExit false
         }
     }
     mods {
