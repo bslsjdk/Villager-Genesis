@@ -1,6 +1,7 @@
 package dev.villagergenesis.ai;
 
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.npc.Villager;
 
 /**
@@ -14,6 +15,19 @@ public final class VillageWorkPolicy {
     private static final String GROUND_RESTING = "villager_genesis_ground_resting";
 
     private VillageWorkPolicy() {}
+
+    /**
+     * A routine task owns movement while it is active. Vanilla villager Brain social behaviors
+     * also write WALK_TARGET and INTERACTION_TARGET, which can continually redirect a worker
+     * away from its assigned resource. Clear those transient intents each work tick; the active
+     * Goal remains responsible for its own navigation and task completion.
+     */
+    public static void claimRoutineWork(Villager villager) {
+        if (villager == null || !villager.isAlive()) return;
+        villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
+    }
 
     public static boolean canPerformRoutineWork(Villager villager) {
         return villager != null && villager.isAlive()
