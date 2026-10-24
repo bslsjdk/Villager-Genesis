@@ -52,7 +52,6 @@ public final class VillageStarterShelterGoal extends Goal {
         if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
-                || !villager.getNavigation().isDone()
                 || level.getGameTime() < villager.getPersistentData().getLong(NEXT_TRY)) {
             return false;
         }
@@ -101,6 +100,7 @@ public final class VillageStarterShelterGoal extends Goal {
 
     @Override
     public void tick() {
+        VillageWorkPolicy.claimRoutineWork(villager);
         if (!(villager.level() instanceof ServerLevel level) || site == null) {
             finished = true;
             return;
