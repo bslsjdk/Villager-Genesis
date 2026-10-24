@@ -53,7 +53,7 @@ public final class SettlementTaskManager {
         }
     }
 
-    private record TaskKey(TaskType type, long packedTarget) {}
+    record TaskKey(TaskType type, long packedTarget) {}
 
     private static SettlementTaskManager forLevel(ServerLevel level) {
         synchronized (LEVEL_MANAGERS) {
