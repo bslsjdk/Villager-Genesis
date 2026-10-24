@@ -55,7 +55,7 @@ public final class VillageCropWorkGoal extends Goal {
     public boolean canUse() {
         if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
-                || villager.isBaby() || villager.getTarget() != null || !villager.getNavigation().isDone()
+                || villager.isBaby() || villager.getTarget() != null
                 || VillageRoleService.ensureRole(villager) != VillageRoleService.Role.FARMER
                 || level.getGameTime() < villager.getPersistentData().getLong(NEXT_TRY)) return false;
         ItemStack tool = villager.getMainHandItem();
@@ -77,6 +77,7 @@ public final class VillageCropWorkGoal extends Goal {
 
     @Override
     public void tick() {
+        VillageWorkPolicy.claimRoutineWork(villager);
         if (finished) return;
         travelTicks++;
         if (!(villager.level() instanceof ServerLevel level) || target == null || !level.hasChunkAt(target)) {
