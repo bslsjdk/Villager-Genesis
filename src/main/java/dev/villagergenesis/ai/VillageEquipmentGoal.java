@@ -41,6 +41,7 @@ public final class VillageEquipmentGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         if (!(villager.level() instanceof ServerLevel level) || !villager.isAlive()
                 || villager.isBaby() || villager.getTarget() != null
                 || !villager.getNavigation().isDone()
@@ -97,6 +98,7 @@ public final class VillageEquipmentGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (!VillageWorkPolicy.canPerformRoutineWork(villager)) return false;
         return !finished && source != null && targetSlot != null
                 && travelTicks < MAX_TRAVEL_TICKS && villager.isAlive()
                 && villager.getTarget() == null;
