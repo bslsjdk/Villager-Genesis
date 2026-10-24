@@ -74,6 +74,7 @@ public final class VillageToolCraftingGoal extends Goal {
 
     @Override
     public void tick() {
+        VillageWorkPolicy.claimRoutineWork(villager);
         if (!(villager.level() instanceof ServerLevel level) || desiredTool == null) {
             finished = true;
             return;
