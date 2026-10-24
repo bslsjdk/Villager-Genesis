@@ -139,7 +139,10 @@ public final class VillageLumberjackGoal extends Goal {
                 harvestOneLog(level);
                 finished = true;
             }
-        } else if (villager.getNavigation().isDone() && travelTicks % 30 == 0) {
+        } else if (travelTicks % 10 == 0
+                && (villager.getNavigation().isDone()
+                || !VillageWorkPolicy.navigationTargets(villager, targetLog))) {
+            // Reclaim the path if vanilla Brain tried to redirect the worker to a social target.
             navigate();
         }
     }
