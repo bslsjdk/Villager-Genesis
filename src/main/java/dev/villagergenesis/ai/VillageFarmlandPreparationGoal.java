@@ -64,6 +64,7 @@ public final class VillageFarmlandPreparationGoal extends Goal {
 
     @Override
     public void tick() {
+        VillageWorkPolicy.claimRoutineWork(villager);
         if (finished) return;
         finished = true;
         if (!(villager.level() instanceof ServerLevel level) || target == null
