@@ -160,11 +160,11 @@ public final class VillageMiningGoal extends Goal {
             if (!level.hasChunkAt(check) || level.getBlockEntity(check) != null) return true;
             BlockState state = level.getBlockState(check);
             if (state.is(Blocks.CRAFTING_TABLE) || state.is(Blocks.FURNACE) || state.is(Blocks.CHEST)
-                    || state.is(Blocks.BARREL) || state.is(Blocks.BEDROCK) || state.is(Blocks.CHEST)
+                    || state.is(Blocks.BARREL) || state.is(Blocks.BEDROCK)
                     || state.is(Blocks.BEEHIVE) || state.is(Blocks.BEE_NEST) || state.is(Blocks.LADDER)
                     || state.is(Blocks.TORCH) || state.is(Blocks.WALL_TORCH) || state.is(Blocks.LANTERN)
-                    || state.is(Blocks.BED) || state.is(Blocks.DOOR) || state.is(Blocks.FARMLAND)
-                    || state.is(Blocks.CROPS) || state.is(Blocks.WHEAT)) return true;
+                    || state.is(BlockTags.BEDS) || state.is(BlockTags.DOORS) || state.is(Blocks.FARMLAND)
+                    || state.is(BlockTags.CROPS)) return true;
         }
         return false;
     }
